@@ -78,7 +78,7 @@ class HomeActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_inventario -> {
-                    // TODO: InventarioFragment
+                    replaceFragment(InventarioFragment())
                     true
                 }
                 else -> false
