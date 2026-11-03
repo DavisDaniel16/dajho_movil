@@ -72,10 +72,12 @@ class VentaFragment : Fragment() {
         )
 
         rvCarrito.layoutManager = LinearLayoutManager(requireContext())
-        rvCarrito.adapter = carritoAdapter
+        rvCarrito.adapter = productoAdapter // Mostrar lista de productos por defecto
 
+        // Pre-cargar el negocio_id y cargar los productos iniciales
         lifecycleScope.launch {
             userNegocioId = getNegocioId()
+            cargarProductosIniciales()
         }
 
         // Escuchar evento de venta exitosa para vaciar el carrito
@@ -83,18 +85,19 @@ class VentaFragment : Fragment() {
             limpiarCarrito()
         }
 
-        // Búsqueda en tiempo real
+        // Búsqueda en tiempo real o recarga de productos si se borra el texto
         etSearch.doAfterTextChanged { text ->
             val query = text.toString().trim()
             searchJob?.cancel()
             if (query.isNotEmpty()) {
-                rvCarrito.adapter = productoAdapter // Mostrar lista de productos encontrados
+                rvCarrito.adapter = productoAdapter
                 searchJob = lifecycleScope.launch {
                     delay(300)
                     searchProducts(query)
                 }
             } else {
-                rvCarrito.adapter = carritoAdapter // Volver a la vista del carrito
+                rvCarrito.adapter = productoAdapter
+                cargarProductosIniciales()
             }
         }
 
@@ -111,6 +114,26 @@ class VentaFragment : Fragment() {
         actualizarTotal()
     }
 
+    private fun cargarProductosIniciales() {
+        lifecycleScope.launch {
+            try {
+                val negocioId = userNegocioId ?: getNegocioId() ?: return@launch
+
+                val variantes = SupabaseModule.client.from("variante")
+                    .select(Columns.raw("*, producto:producto_id(id, nombre)")) {
+                        filter {
+                            eq("negocio_id", negocioId)
+                        }
+                    }
+                    .decodeList<VarianteDto>()
+
+                productoAdapter.updateList(variantes)
+            } catch (e: Exception) {
+                Log.e("VentaFragment", "Error al cargar productos iniciales", e)
+            }
+        }
+    }
+
     private fun agregarAlCarrito(variante: VarianteDto) {
         val existente = listaCarrito.find { it.variante.id == variante.id }
         if (existente != null) {
@@ -119,7 +142,7 @@ class VentaFragment : Fragment() {
             listaCarrito.add(ItemCarritoDto(variante, cantidad = 1))
         }
 
-        etSearch.setText("") // Limpia el buscador y restaura la lista del carrito automáticamente
+        etSearch.setText("")
         carritoAdapter.updateList(listaCarrito.toList())
         actualizarTotal()
         Toast.makeText(requireContext(), "Producto agregado al carrito", Toast.LENGTH_SHORT).show()

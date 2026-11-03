@@ -74,7 +74,7 @@ class HomeActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_deudas -> {
-                    // TODO: DeudasFragment
+                    replaceFragment(DeudasFragment())
                     true
                 }
                 R.id.nav_inventario -> {
