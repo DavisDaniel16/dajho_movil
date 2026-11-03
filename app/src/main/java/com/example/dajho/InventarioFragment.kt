@@ -43,8 +43,14 @@ class InventarioFragment : Fragment() {
         etSearch = view.findViewById(R.id.etSearch)
         rvInventario = view.findViewById(R.id.rvInventario)
 
+        // Escuchar cuando un producto sea editado para recargar el inventario
+        childFragmentManager.setFragmentResultListener("request_inventario_actualizado", viewLifecycleOwner) { _, _ ->
+            cargarInventario()
+        }
+
         inventarioAdapter = InventarioAdapter { variante ->
-            Toast.makeText(requireContext(), "Variante: ${variante.sku}", Toast.LENGTH_SHORT).show()
+            val editarBottomSheet = EditarProductoBottomSheet(variante)
+            editarBottomSheet.show(childFragmentManager, "EditarProductoBottomSheet")
         }
 
         rvInventario.layoutManager = LinearLayoutManager(requireContext())

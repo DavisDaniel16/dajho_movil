@@ -15,6 +15,7 @@ data class VarianteDto(
     val talla: String? = null,
     val color: String? = null,
     val precio_venta: Double? = null,
+    val precio_costo: Double? = null,
     val stock_actual: Int? = null,
     val producto_id: Long? = null,
     val producto: ProductoSimpleDto? = null
