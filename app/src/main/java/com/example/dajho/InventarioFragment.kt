@@ -11,6 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.textfield.TextInputEditText
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
@@ -23,6 +24,7 @@ class InventarioFragment : Fragment() {
 
     private lateinit var etSearch: TextInputEditText
     private lateinit var rvInventario: RecyclerView
+    private lateinit var fabAgregarProducto: FloatingActionButton
     private lateinit var inventarioAdapter: InventarioAdapter
 
     private var todosLosProductos = listOf<VarianteDto>()
@@ -42,8 +44,14 @@ class InventarioFragment : Fragment() {
 
         etSearch = view.findViewById(R.id.etSearch)
         rvInventario = view.findViewById(R.id.rvInventario)
+        fabAgregarProducto = view.findViewById(R.id.fabAgregarProducto)
 
-        // Escuchar cuando un producto sea editado para recargar el inventario
+        fabAgregarProducto.setOnClickListener {
+            val nuevoProductoBottomSheet = NuevoProductoBottomSheet()
+            nuevoProductoBottomSheet.show(childFragmentManager, "NuevoProductoBottomSheet")
+        }
+
+        // Escuchar cuando un producto sea editado o creado para recargar el inventario
         childFragmentManager.setFragmentResultListener("request_inventario_actualizado", viewLifecycleOwner) { _, _ ->
             cargarInventario()
         }
