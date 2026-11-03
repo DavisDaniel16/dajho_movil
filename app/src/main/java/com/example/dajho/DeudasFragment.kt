@@ -74,9 +74,11 @@ class DeudasFragment : Fragment() {
                     return@launch
                 }
 
-                // 1. Descargar deudas individuales uniendo la tabla cliente y venta desde Supabase
+                // Consulta con JOIN anidado: fiado -> cliente, venta -> detalle_venta -> variante -> producto
                 val deudasRaw = SupabaseModule.client.from("fiado")
-                    .select(Columns.raw("*, cliente:cliente_id(id, nombre, telefono), venta:venta_id(id, fecha_dispositivo)")) {
+                    .select(
+                        Columns.raw("*, cliente:cliente_id(id, nombre, telefono), venta:venta_id(id, fecha_dispositivo, detalle_venta(cantidad, variante:variante_id(producto:producto_id(nombre))))")
+                    ) {
                         filter {
                             eq("negocio_id", negocioId)
                             eq("estado", "abierto")
@@ -84,7 +86,7 @@ class DeudasFragment : Fragment() {
                     }
                     .decodeList<DeudaDto>()
 
-                // 2. Agrupar por cliente_id y sumar los saldos
+                // Agrupar por cliente_id
                 val deudasAgrupadas = deudasRaw.groupBy { it.cliente_id }.map { (clienteId, fiadosCliente) ->
                     val primerCliente = fiadosCliente.firstOrNull()?.cliente
                     val saldoSumado = fiadosCliente.sumOf { it.saldo ?: it.monto_original ?: 0.0 }
@@ -98,7 +100,6 @@ class DeudasFragment : Fragment() {
                     )
                 }
 
-                // 3. Cargar la lista agrupada en el adaptador
                 deudaAdapter.updateList(deudasAgrupadas)
 
                 if (deudasAgrupadas.isEmpty()) {

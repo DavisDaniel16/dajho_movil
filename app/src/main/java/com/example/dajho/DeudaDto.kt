@@ -10,9 +10,27 @@ data class ClienteSimpleDto(
 )
 
 @Serializable
-data class VentaSimpleDto(
+data class ProductoNombreSimpleDto(
+    val nombre: String? = null
+)
+
+@Serializable
+data class VarianteSimpleDto(
     val id: Long? = null,
-    val fecha_dispositivo: String? = null
+    val producto: ProductoNombreSimpleDto? = null
+)
+
+@Serializable
+data class DetalleVentaSimpleDto(
+    val cantidad: Int? = null,
+    val variante: VarianteSimpleDto? = null
+)
+
+@Serializable
+data class VentaDetalleSimpleDto(
+    val id: Long? = null,
+    val fecha_dispositivo: String? = null,
+    val detalle_venta: List<DetalleVentaSimpleDto>? = null
 )
 
 @Serializable
@@ -25,7 +43,7 @@ data class DeudaDto(
     val estado: String? = null,
     val fecha_vencimiento: String? = null,
     val cliente: ClienteSimpleDto? = null,
-    val venta: VentaSimpleDto? = null
+    val venta: VentaDetalleSimpleDto? = null
 )
 
 data class DeudaClienteAgrupadaDto(

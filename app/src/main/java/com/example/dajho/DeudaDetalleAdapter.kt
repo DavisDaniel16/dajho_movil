@@ -26,10 +26,22 @@ class DeudaDetalleAdapter(
     override fun onBindViewHolder(holder: DeudaDetalleViewHolder, position: Int) {
         val item = listaDeudas[position]
 
-        val fechaRaw = item.venta?.fecha_dispositivo
-        val fechaStr = if (!fechaRaw.isNullOrEmpty()) fechaRaw.take(10) else "Fecha no disponible"
+        // Extraer los nombres de productos y cantidades compradas
+        val detalles = item.venta?.detalle_venta ?: emptyList()
+        val resumenProductos = if (detalles.isNotEmpty()) {
+            detalles.joinToString(", ") { detalle ->
+                val nombreProducto = detalle.variante?.producto?.nombre ?: "Producto"
+                val cant = detalle.cantidad ?: 1
+                "$nombreProducto (x$cant)"
+            }
+        } else {
+            "Compra de productos"
+        }
 
-        holder.tvFechaCompra.text = "Compra: $fechaStr"
+        val fechaRaw = item.venta?.fecha_dispositivo
+        val fechaStr = if (!fechaRaw.isNullOrEmpty()) fechaRaw.take(10) else ""
+
+        holder.tvFechaCompra.text = if (fechaStr.isNotEmpty()) "$resumenProductos • $fechaStr" else resumenProductos
         holder.tvEstado.text = "Estado: ${item.estado?.replaceFirstChar { it.uppercase() } ?: "Pendiente"}"
 
         val saldo = item.saldo ?: item.monto_original ?: 0.0
