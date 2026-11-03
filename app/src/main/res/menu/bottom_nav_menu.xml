@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_inicio"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="Inicio" />
+    <item
+        android:id="@+id/nav_balance"
+        android:icon="@android:drawable/ic_menu_sort_by_size"
+        android:title="Balance" />
+    <item
+        android:id="@+id/nav_venta"
+        android:icon="@android:drawable/ic_menu_add"
+        android:title="Venta" />
+    <item
+        android:id="@+id/nav_deudas"
+        android:icon="@android:drawable/ic_menu_manage"
+        android:title="Deudas" />
+    <item
+        android:id="@+id/nav_inventario"
+        android:icon="@android:drawable/ic_menu_agenda"
+        android:title="Inventario" />
+</menu>

@@ -1,0 +1,186 @@
+package com.example.dajho
+
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.TextView
+import android.widget.Toast
+import androidx.core.widget.doAfterTextChanged
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.textfield.TextInputEditText
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.Locale
+
+class VentaFragment : Fragment() {
+
+    private lateinit var etSearch: TextInputEditText
+    private lateinit var rvCarrito: RecyclerView
+    private lateinit var tvTotal: TextView
+    private lateinit var btnCobrar: MaterialButton
+
+    private lateinit var productoAdapter: ProductoAdapter
+    private lateinit var carritoAdapter: CarritoAdapter
+
+    private val listaCarrito = mutableListOf<ItemCarritoDto>()
+    private var searchJob: Job? = null
+    private var userNegocioId: Long? = null
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.fragment_venta, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        etSearch = view.findViewById(R.id.etSearch)
+        rvCarrito = view.findViewById(R.id.rvCarrito)
+        tvTotal = view.findViewById(R.id.tvTotal)
+        btnCobrar = view.findViewById(R.id.btnCobrar)
+
+        // Adaptador de Búsqueda
+        productoAdapter = ProductoAdapter { variante ->
+            agregarAlCarrito(variante)
+        }
+
+        // Adaptador del Carrito
+        carritoAdapter = CarritoAdapter(
+            onCantidadChanged = { item, nuevaCantidad ->
+                item.cantidad = nuevaCantidad
+                carritoAdapter.updateList(listaCarrito.toList())
+                actualizarTotal()
+            },
+            onItemRemoved = { item ->
+                listaCarrito.remove(item)
+                carritoAdapter.updateList(listaCarrito.toList())
+                actualizarTotal()
+            }
+        )
+
+        rvCarrito.layoutManager = LinearLayoutManager(requireContext())
+        rvCarrito.adapter = carritoAdapter
+
+        lifecycleScope.launch {
+            userNegocioId = getNegocioId()
+        }
+
+        // Escuchar evento de venta exitosa para vaciar el carrito
+        parentFragmentManager.setFragmentResultListener("request_venta_exitosa", viewLifecycleOwner) { _, _ ->
+            limpiarCarrito()
+        }
+
+        // Búsqueda en tiempo real
+        etSearch.doAfterTextChanged { text ->
+            val query = text.toString().trim()
+            searchJob?.cancel()
+            if (query.isNotEmpty()) {
+                rvCarrito.adapter = productoAdapter // Mostrar lista de productos encontrados
+                searchJob = lifecycleScope.launch {
+                    delay(300)
+                    searchProducts(query)
+                }
+            } else {
+                rvCarrito.adapter = carritoAdapter // Volver a la vista del carrito
+            }
+        }
+
+        btnCobrar.setOnClickListener {
+            val total = calcularTotal()
+            if (listaCarrito.isEmpty()) {
+                Toast.makeText(requireContext(), "El carrito está vacío", Toast.LENGTH_SHORT).show()
+            } else {
+                val cobroBottomSheet = CobroBottomSheet(total, listaCarrito.toList())
+                cobroBottomSheet.show(parentFragmentManager, "CobroBottomSheet")
+            }
+        }
+
+        actualizarTotal()
+    }
+
+    private fun agregarAlCarrito(variante: VarianteDto) {
+        val existente = listaCarrito.find { it.variante.id == variante.id }
+        if (existente != null) {
+            existente.cantidad += 1
+        } else {
+            listaCarrito.add(ItemCarritoDto(variante, cantidad = 1))
+        }
+
+        etSearch.setText("") // Limpia el buscador y restaura la lista del carrito automáticamente
+        carritoAdapter.updateList(listaCarrito.toList())
+        actualizarTotal()
+        Toast.makeText(requireContext(), "Producto agregado al carrito", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun limpiarCarrito() {
+        listaCarrito.clear()
+        carritoAdapter.updateList(emptyList())
+        etSearch.setText("")
+        actualizarTotal()
+    }
+
+    private fun calcularTotal(): Double {
+        return listaCarrito.sumOf { it.subtotal }
+    }
+
+    private fun actualizarTotal() {
+        val total = calcularTotal()
+        tvTotal.text = "$${String.format(Locale.US, "%.2f", total)}"
+    }
+
+    private suspend fun getNegocioId(): Long? {
+        val currentUser = SupabaseModule.client.auth.currentUserOrNull() ?: return null
+        return try {
+            val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
+                .select {
+                    filter {
+                        eq("usuario_id", currentUser.id)
+                    }
+                }
+                .decodeSingleOrNull<NegocioUsuarioDto>()
+            negocioUsuario?.negocio_id
+        } catch (e: Exception) {
+            Log.e("VentaFragment", "Error al obtener negocio_id", e)
+            null
+        }
+    }
+
+    private fun searchProducts(query: String) {
+        lifecycleScope.launch {
+            try {
+                val negocioId = userNegocioId ?: getNegocioId()
+                if (negocioId == null) {
+                    Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
+
+                val variantes = SupabaseModule.client.from("variante")
+                    .select(Columns.raw("*, producto:producto_id(id, nombre)")) {
+                        filter {
+                            eq("negocio_id", negocioId)
+                            ilike("sku", "%$query%")
+                        }
+                    }
+                    .decodeList<VarianteDto>()
+
+                productoAdapter.updateList(variantes)
+            } catch (e: Exception) {
+                Log.e("VentaFragment", "Error buscando productos", e)
+                Toast.makeText(requireContext(), "Error al buscar: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
