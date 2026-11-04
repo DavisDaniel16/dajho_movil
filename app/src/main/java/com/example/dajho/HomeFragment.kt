@@ -16,6 +16,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
@@ -46,6 +47,8 @@ class HomeFragment : Fragment() {
     private lateinit var tvBalanceAmount: TextView
     private lateinit var tvExpensesAmount: TextView
     private lateinit var btnRegistrarVenta: Button
+    private var fechaSeleccionada: LocalDate = LocalDate.now()
+    private var metricasJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -74,6 +77,19 @@ class HomeFragment : Fragment() {
             Toast.makeText(requireContext(), "Buscador global próximamente", Toast.LENGTH_SHORT).show()
         }
 
+        view.findViewById<MaterialCardView>(R.id.cardClients).setOnClickListener {
+            Toast.makeText(requireContext(), "Módulo de Clientes próximamente", Toast.LENGTH_SHORT).show()
+        }
+        view.findViewById<MaterialCardView>(R.id.cardProviders).setOnClickListener {
+            Toast.makeText(requireContext(), "Módulo de Proveedores próximamente", Toast.LENGTH_SHORT).show()
+        }
+        view.findViewById<MaterialCardView>(R.id.cardEmployees).setOnClickListener {
+            Toast.makeText(requireContext(), "Módulo de Empleados próximamente", Toast.LENGTH_SHORT).show()
+        }
+        view.findViewById<MaterialCardView>(R.id.cardDebts).setOnClickListener {
+            Toast.makeText(requireContext(), "Módulo de Deudas próximamente", Toast.LENGTH_SHORT).show()
+        }
+
         generateDynamicDates()
 
         btnRegistrarVenta.setOnClickListener {
@@ -81,7 +97,7 @@ class HomeFragment : Fragment() {
         }
 
         // Cargar las métricas reales del día desde Supabase
-        cargarMetricasDelDia()
+        cargarMetricasDelDia(fechaSeleccionada)
     }
 
     private suspend fun getNegocioId(): Long? {
@@ -101,14 +117,14 @@ class HomeFragment : Fragment() {
         }
     }
 
-    private fun cargarMetricasDelDia() {
-        lifecycleScope.launch {
+    private fun cargarMetricasDelDia(fechaSeleccionada: LocalDate) {
+        metricasJob?.cancel()
+        metricasJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val negocioId = getNegocioId() ?: return@launch
-                val today = LocalDate.now()
-                val yesterday = today.minusDays(1)
-                val todayStr = today.toString()
-                val yesterdayStr = yesterday.toString()
+                val fechaAnterior = fechaSeleccionada.minusDays(1)
+                val fechaStr = fechaSeleccionada.toString()
+                val fechaAnteriorStr = fechaAnterior.toString()
 
                 // 1. Consultar Ventas de hoy
                 val ventasHoyList = SupabaseModule.client.from("venta")
@@ -116,8 +132,8 @@ class HomeFragment : Fragment() {
                         filter {
                             eq("negocio_id", negocioId)
                             eq("estado", "completada")
-                            gte("fecha_dispositivo", "${todayStr}T00:00:00")
-                            lte("fecha_dispositivo", "${todayStr}T23:59:59")
+                            gte("fecha_dispositivo", "${fechaStr}T00:00:00")
+                            lte("fecha_dispositivo", "${fechaStr}T23:59:59")
                         }
                     }
                     .decodeList<VentaResumenDto>()
@@ -130,8 +146,8 @@ class HomeFragment : Fragment() {
                         filter {
                             eq("negocio_id", negocioId)
                             eq("estado", "completada")
-                            gte("fecha_dispositivo", "${yesterdayStr}T00:00:00")
-                            lte("fecha_dispositivo", "${yesterdayStr}T23:59:59")
+                            gte("fecha_dispositivo", "${fechaAnteriorStr}T00:00:00")
+                            lte("fecha_dispositivo", "${fechaAnteriorStr}T23:59:59")
                         }
                     }
                     .decodeList<VentaResumenDto>()
@@ -143,7 +159,7 @@ class HomeFragment : Fragment() {
                     .select {
                         filter {
                             eq("negocio_id", negocioId)
-                            eq("fecha", todayStr)
+                            eq("fecha", fechaStr)
                         }
                     }
                     .decodeList<GastoResumenDto>()
@@ -199,28 +215,42 @@ class HomeFragment : Fragment() {
 
         for (i in -4..0) {
             val date = today.plusDays(i.toLong())
-            val dateText = date.format(formatter)
-
             val textView = TextView(requireContext()).apply {
-                text = dateText
+                text = date.format(formatter)
                 textSize = 13f
                 setPadding(32, 12, 32, 12)
                 gravity = Gravity.CENTER
-                if (i == 0) {
-                    setBackgroundColor(Color.parseColor("#FEF08A"))
-                    setTextColor(Color.BLACK)
-                    setTypeface(null, android.graphics.Typeface.BOLD)
-                } else {
-                    setTextColor(Color.parseColor("#334155"))
-                }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
                     marginEnd = 12
                 }
+                tag = date
+                setOnClickListener {
+                    fechaSeleccionada = date
+                    actualizarSeleccionFechas()
+                    cargarMetricasDelDia(date)
+                }
             }
             layoutFechas.addView(textView)
+        }
+
+        actualizarSeleccionFechas()
+    }
+
+    private fun actualizarSeleccionFechas() {
+        for (i in 0 until layoutFechas.childCount) {
+            val pill = layoutFechas.getChildAt(i) as TextView
+            if (pill.tag == fechaSeleccionada) {
+                pill.setBackgroundColor(Color.parseColor("#FEF08A"))
+                pill.setTextColor(Color.BLACK)
+                pill.setTypeface(null, android.graphics.Typeface.BOLD)
+            } else {
+                pill.setBackgroundColor(Color.TRANSPARENT)
+                pill.setTextColor(Color.parseColor("#334155"))
+                pill.setTypeface(null, android.graphics.Typeface.NORMAL)
+            }
         }
     }
 }

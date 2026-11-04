@@ -55,12 +55,11 @@ class VentaFragment : Fragment() {
         btnCobrar = view.findViewById(R.id.btnCobrar)
         btnVerCarrito = view.findViewById(R.id.btnVerCarrito)
 
-        // Adaptador de Búsqueda
+        // Adaptadores
         productoAdapter = ProductoAdapter { variante ->
             agregarAlCarrito(variante)
         }
 
-        // Adaptador del Carrito
         carritoAdapter = CarritoAdapter(
             onCantidadChanged = { item, nuevaCantidad ->
                 item.cantidad = nuevaCantidad
@@ -77,7 +76,7 @@ class VentaFragment : Fragment() {
         )
 
         rvCarrito.layoutManager = LinearLayoutManager(requireContext())
-        rvCarrito.adapter = carritoAdapter // Iniciar viendo el carrito por defecto
+        rvCarrito.adapter = productoAdapter // INICIAR MOSTRANDO EL CATÁLOGO DE PRODUCTOS
 
         // Pre-cargar el negocio_id y cargar los productos iniciales
         lifecycleScope.launch {
@@ -96,28 +95,28 @@ class VentaFragment : Fragment() {
             if (viendoCarrito) {
                 rvCarrito.adapter = carritoAdapter
                 btnVerCarrito.text = "Seguir Comprando"
-                etSearch.setText("") // Limpiar buscador
             } else {
                 rvCarrito.adapter = productoAdapter
                 actualizarBotonCarrito()
             }
         }
 
-        // Búsqueda en tiempo real o recarga de productos si se borra el texto
+        // Búsqueda en tiempo real
         etSearch.doAfterTextChanged { text ->
             val query = text.toString().trim()
             searchJob?.cancel()
             if (query.isNotEmpty()) {
-                viendoCarrito = false
-                rvCarrito.adapter = productoAdapter
-                actualizarBotonCarrito()
+                if (viendoCarrito) {
+                    viendoCarrito = false
+                    rvCarrito.adapter = productoAdapter
+                    actualizarBotonCarrito()
+                }
                 searchJob = lifecycleScope.launch {
                     delay(300)
                     searchProducts(query)
                 }
             } else {
                 if (!viendoCarrito) {
-                    rvCarrito.adapter = productoAdapter
                     cargarProductosIniciales()
                 }
             }
@@ -158,18 +157,26 @@ class VentaFragment : Fragment() {
     }
 
     private fun agregarAlCarrito(variante: VarianteDto) {
+        val stockDisponible = variante.stock_actual
+        if (stockDisponible == null || stockDisponible <= 0) {
+            Toast.makeText(requireContext(), "No hay stock disponible de este producto", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         val existente = listaCarrito.find { it.variante.id == variante.id }
+        val cantidadEnCarrito = existente?.cantidad ?: 0
+        if (cantidadEnCarrito >= stockDisponible) {
+            Toast.makeText(requireContext(), "No puedes agregar más unidades. Límite de stock alcanzado", Toast.LENGTH_SHORT).show()
+            return
+        }
+
         if (existente != null) {
             existente.cantidad += 1
         } else {
             listaCarrito.add(ItemCarritoDto(variante, cantidad = 1))
         }
 
-        etSearch.setText("") // Limpia el buscador y restaura la vista
-        viendoCarrito = true
-        rvCarrito.adapter = carritoAdapter
-        btnVerCarrito.text = "Seguir Comprando"
-
+        // Actualizamos el carrito y el botón SIN cambiar la vista de productos
         carritoAdapter.updateList(listaCarrito.toList())
         actualizarTotal()
         actualizarBotonCarrito()
@@ -197,7 +204,11 @@ class VentaFragment : Fragment() {
 
     private fun actualizarBotonCarrito() {
         val totalItems = listaCarrito.sumOf { it.cantidad }
-        btnVerCarrito.text = "Ver Carrito ($totalItems)"
+        if (viendoCarrito) {
+            btnVerCarrito.text = "Seguir Comprando"
+        } else {
+            btnVerCarrito.text = "Ver Carrito ($totalItems)"
+        }
     }
 
     private suspend fun getNegocioId(): Long? {

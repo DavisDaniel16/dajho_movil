@@ -122,6 +122,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/cardSummary" />
 
+    <TextView
+        android:id="@+id/tvMovimientosSubtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="4dp"
+        android:text="Historial general de todos los días"
+        android:textColor="#64748B"
+        android:textSize="12sp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvMovimientosTitle" />
+
     <!-- RecyclerView de movimientos -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvMovimientos"
@@ -130,7 +142,7 @@
         android:layout_marginTop="8dp"
         android:paddingHorizontal="16dp"
         android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/tvMovimientosTitle"
+        app:layout_constraintTop_toBottomOf="@id/tvMovimientosSubtitle"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />

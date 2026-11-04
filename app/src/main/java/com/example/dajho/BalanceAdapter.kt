@@ -9,7 +9,8 @@ import androidx.recyclerview.widget.RecyclerView
 import java.util.Locale
 
 class BalanceAdapter(
-    private var listaMovimientos: List<MovimientoDto> = emptyList()
+    private var listaMovimientos: List<MovimientoDto> = emptyList(),
+    private val onItemClick: (MovimientoDto) -> Unit
 ) : RecyclerView.Adapter<BalanceAdapter.BalanceViewHolder>() {
 
     class BalanceViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -38,6 +39,12 @@ class BalanceAdapter(
             holder.tvMonto.text = "-$$montoFormateado"
             holder.tvMonto.setTextColor(Color.parseColor("#EF4444")) // Rojo
         }
+
+        holder.itemView.setOnClickListener(
+            if (item.tipo == "ingreso") View.OnClickListener {
+                onItemClick(item)
+            } else null
+        )
     }
 
     override fun getItemCount(): Int = listaMovimientos.size

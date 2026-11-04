@@ -15,8 +15,25 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import java.util.Locale
+
+@Serializable
+data class DetalleVentaBalanceDto(
+    val cantidad: Int? = null,
+    val precio_unitario: Double? = null,
+    val variante: VarianteSimpleDto? = null
+)
+
+@Serializable
+data class VentaBalanceDto(
+    val id: Long? = null,
+    val total: Double? = null,
+    val fecha_dispositivo: String? = null,
+    val detalle_venta: List<DetalleVentaBalanceDto>? = null
+)
 
 class BalanceFragment : Fragment() {
 
@@ -48,7 +65,10 @@ class BalanceFragment : Fragment() {
         progressBar = view.findViewById(R.id.progressBar)
         fabAgregarGasto = view.findViewById(R.id.fabAgregarGasto)
 
-        balanceAdapter = BalanceAdapter()
+        balanceAdapter = BalanceAdapter { movimiento ->
+            DetalleVentaBottomSheet(movimiento.titulo, movimiento.detallesVenta)
+                .show(childFragmentManager, "DetalleVentaBottomSheet")
+        }
         rvMovimientos.layoutManager = LinearLayoutManager(requireContext())
         rvMovimientos.adapter = balanceAdapter
 
@@ -100,13 +120,19 @@ class BalanceFragment : Fragment() {
 
                 // 1. Consultar Ventas (Ingresos) completadas
                 val ventas = SupabaseModule.client.from("venta")
-                    .select {
+                    .select(
+                        Columns.raw(
+                            "id,total,fecha_dispositivo," +
+                                "detalle_venta(cantidad,precio_unitario," +
+                                "variante:variante_id(producto:producto_id(nombre)))"
+                        )
+                    ) {
                         filter {
                             eq("negocio_id", negocioId)
                             eq("estado", "completada")
                         }
                     }
-                    .decodeList<VentaResumenDto>()
+                    .decodeList<VentaBalanceDto>()
 
                 // 2. Consultar Gastos (Egresos)
                 val gastos = SupabaseModule.client.from("gasto")
@@ -127,7 +153,8 @@ class BalanceFragment : Fragment() {
                             titulo = "Venta #${venta.id ?: ""}",
                             tipo = "ingreso",
                             monto = venta.total ?: 0.0,
-                            fecha = fechaStr
+                            fecha = fechaStr,
+                            detallesVenta = venta.detalle_venta.orEmpty()
                         )
                     )
                 }

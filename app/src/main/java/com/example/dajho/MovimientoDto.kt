@@ -4,5 +4,6 @@ data class MovimientoDto(
     val titulo: String,
     val tipo: String, // "ingreso" o "egreso"
     val monto: Double,
-    val fecha: String
+    val fecha: String,
+    val detallesVenta: List<DetalleVentaBalanceDto> = emptyList()
 )

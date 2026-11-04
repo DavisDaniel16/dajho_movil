@@ -286,6 +286,7 @@
 
                         <!-- 1. Clientes -->
                         <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardClients"
                             android:layout_width="0dp"
                             android:layout_height="100dp"
                             android:layout_marginEnd="6dp"
@@ -320,6 +321,7 @@
 
                         <!-- 2. Proveedores -->
                         <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardProviders"
                             android:layout_width="0dp"
                             android:layout_height="100dp"
                             android:layout_marginStart="6dp"
@@ -363,6 +365,7 @@
 
                         <!-- 3. Empleados -->
                         <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardEmployees"
                             android:layout_width="0dp"
                             android:layout_height="100dp"
                             android:layout_marginEnd="6dp"
@@ -397,6 +400,7 @@
 
                         <!-- 4. Deudas -->
                         <com.google.android.material.card.MaterialCardView
+                            android:id="@+id/cardDebts"
                             android:layout_width="0dp"
                             android:layout_height="100dp"
                             android:layout_marginStart="6dp"
