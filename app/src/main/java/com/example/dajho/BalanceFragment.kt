@@ -5,6 +5,7 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -23,6 +24,7 @@ class BalanceFragment : Fragment() {
     private lateinit var tvTotalIngresos: TextView
     private lateinit var tvTotalEgresos: TextView
     private lateinit var rvMovimientos: RecyclerView
+    private lateinit var progressBar: ProgressBar
     private lateinit var fabAgregarGasto: FloatingActionButton
 
     private lateinit var balanceAdapter: BalanceAdapter
@@ -43,6 +45,7 @@ class BalanceFragment : Fragment() {
         tvTotalIngresos = view.findViewById(R.id.tvTotalIngresos)
         tvTotalEgresos = view.findViewById(R.id.tvTotalEgresos)
         rvMovimientos = view.findViewById(R.id.rvMovimientos)
+        progressBar = view.findViewById(R.id.progressBar)
         fabAgregarGasto = view.findViewById(R.id.fabAgregarGasto)
 
         balanceAdapter = BalanceAdapter()
@@ -85,6 +88,7 @@ class BalanceFragment : Fragment() {
     }
 
     private fun cargarDatosBalance() {
+        progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
@@ -158,6 +162,8 @@ class BalanceFragment : Fragment() {
             } catch (e: Exception) {
                 Log.e("BalanceFragment", "Error al cargar balance", e)
                 Toast.makeText(requireContext(), "Error al cargar balance: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            } finally {
+                progressBar.visibility = View.GONE
             }
         }
     }

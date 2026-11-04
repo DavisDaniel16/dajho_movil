@@ -1,5 +1,6 @@
 package com.example.dajho
 
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
@@ -9,8 +10,10 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.card.MaterialCardView
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.launch
@@ -18,6 +21,7 @@ import kotlinx.serialization.Serializable
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
 
 @Serializable
 data class VentaResumenDto(
@@ -60,6 +64,16 @@ class HomeFragment : Fragment() {
         tvExpensesAmount = view.findViewById(R.id.tvExpensesAmount)
         btnRegistrarVenta = view.findViewById(R.id.btnRegistrarVenta)
 
+        val cardCatalog = view.findViewById<View>(R.id.cardCatalog)
+        cardCatalog.setOnClickListener {
+            Toast.makeText(requireContext(), "Catálogo Virtual próximamente", Toast.LENGTH_SHORT).show()
+        }
+
+        val ivSearch = requireActivity().findViewById<View>(R.id.ivSearch)
+        ivSearch?.setOnClickListener {
+            Toast.makeText(requireContext(), "Buscador global próximamente", Toast.LENGTH_SHORT).show()
+        }
+
         generateDynamicDates()
 
         btnRegistrarVenta.setOnClickListener {
@@ -91,10 +105,13 @@ class HomeFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 val negocioId = getNegocioId() ?: return@launch
-                val todayStr = LocalDate.now().toString() // Formato YYYY-MM-DD (ej: "2025-11-01")
+                val today = LocalDate.now()
+                val yesterday = today.minusDays(1)
+                val todayStr = today.toString()
+                val yesterdayStr = yesterday.toString()
 
-                // 1. Consultar Ventas de hoy con estado "completada" usando rango gte/lte para timestamptz
-                val ventasList = SupabaseModule.client.from("venta")
+                // 1. Consultar Ventas de hoy
+                val ventasHoyList = SupabaseModule.client.from("venta")
                     .select {
                         filter {
                             eq("negocio_id", negocioId)
@@ -105,9 +122,23 @@ class HomeFragment : Fragment() {
                     }
                     .decodeList<VentaResumenDto>()
 
-                val totalVentas = ventasList.sumOf { it.total ?: 0.0 }
+                val totalVentasHoy = ventasHoyList.sumOf { it.total ?: 0.0 }
 
-                // 2. Consultar Gastos de hoy usando eq para la columna date
+                // 2. Consultar Ventas de ayer
+                val ventasAyerList = SupabaseModule.client.from("venta")
+                    .select {
+                        filter {
+                            eq("negocio_id", negocioId)
+                            eq("estado", "completada")
+                            gte("fecha_dispositivo", "${yesterdayStr}T00:00:00")
+                            lte("fecha_dispositivo", "${yesterdayStr}T23:59:59")
+                        }
+                    }
+                    .decodeList<VentaResumenDto>()
+
+                val totalVentasAyer = ventasAyerList.sumOf { it.total ?: 0.0 }
+
+                // 3. Consultar Gastos de hoy
                 val gastosList = SupabaseModule.client.from("gasto")
                     .select {
                         filter {
@@ -118,14 +149,37 @@ class HomeFragment : Fragment() {
                     .decodeList<GastoResumenDto>()
 
                 val totalGastos = gastosList.sumOf { it.monto ?: 0.0 }
+                val balance = totalVentasHoy - totalGastos
 
-                // 3. Calcular Balance
-                val balance = totalVentas - totalGastos
+                // 4. Calcular porcentaje vs ayer
+                val tvVsAyer = view?.findViewById<TextView>(R.id.tvVsAyer)
+                val cardVsAyer = tvVsAyer?.parent as? MaterialCardView
 
-                Log.d("Metricas", "Total ventas: $totalVentas, Total gastos: $totalGastos, Balance: $balance")
+                if (totalVentasAyer > 0.0) {
+                    val diff = totalVentasHoy - totalVentasAyer
+                    val percent = (diff / totalVentasAyer) * 100.0
+                    val absPercent = String.format(Locale.US, "%.1f", abs(percent))
+                    if (percent >= 0) {
+                        tvVsAyer?.text = "vs ayer ↑ $absPercent%"
+                        cardVsAyer?.setCardBackgroundColor(Color.parseColor("#DCFCE7")) // Verde
+                        tvVsAyer?.setTextColor(Color.parseColor("#059669"))
+                    } else {
+                        tvVsAyer?.text = "vs ayer ↓ $absPercent%"
+                        cardVsAyer?.setCardBackgroundColor(Color.parseColor("#FEE2E2")) // Rojo claro
+                        tvVsAyer?.setTextColor(Color.parseColor("#DC2626"))
+                    }
+                } else if (totalVentasHoy > 0.0) {
+                    tvVsAyer?.text = "vs ayer ↑ 100%"
+                    cardVsAyer?.setCardBackgroundColor(Color.parseColor("#DCFCE7"))
+                    tvVsAyer?.setTextColor(Color.parseColor("#059669"))
+                } else {
+                    tvVsAyer?.text = "vs ayer 0.0%"
+                    cardVsAyer?.setCardBackgroundColor(Color.parseColor("#F1F5F9"))
+                    tvVsAyer?.setTextColor(Color.parseColor("#64748B"))
+                }
 
-                // 4. Actualizar las tarjetas con los montos formateados
-                tvSalesAmount.text = "$${String.format(Locale.US, "%.2f", totalVentas)}"
+                // 5. Actualizar tarjetas
+                tvSalesAmount.text = "$${String.format(Locale.US, "%.2f", totalVentasHoy)}"
                 tvExpensesAmount.text = "$${String.format(Locale.US, "%.2f", totalGastos)}"
                 tvBalanceAmount.text = "$${String.format(Locale.US, "%.2f", balance)}"
 
@@ -153,11 +207,11 @@ class HomeFragment : Fragment() {
                 setPadding(32, 12, 32, 12)
                 gravity = Gravity.CENTER
                 if (i == 0) {
-                    setBackgroundColor(android.graphics.Color.parseColor("#FEF08A"))
-                    setTextColor(android.graphics.Color.BLACK)
+                    setBackgroundColor(Color.parseColor("#FEF08A"))
+                    setTextColor(Color.BLACK)
                     setTypeface(null, android.graphics.Typeface.BOLD)
                 } else {
-                    setTextColor(android.graphics.Color.parseColor("#334155"))
+                    setTextColor(Color.parseColor("#334155"))
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
