@@ -38,6 +38,21 @@ class HomeActivity : AppCompatActivity() {
     private lateinit var tvRole: TextView
     private lateinit var ivSettings: ImageView
     private lateinit var bottomNav: BottomNavigationView
+    private var rolActual: String = ""
+
+    companion object {
+        const val RESULTADO_ROL = "rol_actualizado"
+        const val EXTRA_ES_PROPIETARIO = "es_propietario"
+    }
+
+    fun esPropietario(): Boolean =
+        rolActual.equals("propietario", ignoreCase = true)
+
+    private fun actualizarRol(rol: String?) {
+        rolActual = rol?.trim().orEmpty()
+        tvRole.text = rolActual.replaceFirstChar { it.uppercase() }.ifEmpty { "Sin Rol" }
+        supportFragmentManager.setFragmentResult(RESULTADO_ROL, Bundle.EMPTY)
+    }
 
     private val perfilLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -66,7 +81,9 @@ class HomeActivity : AppCompatActivity() {
 
         // Abrir PerfilActivity al tocar la rueda dentada
         ivSettings.setOnClickListener {
-            val intent = Intent(this, PerfilActivity::class.java)
+            val intent = Intent(this, PerfilActivity::class.java).apply {
+                putExtra(EXTRA_ES_PROPIETARIO, esPropietario())
+            }
             perfilLauncher.launch(intent)
         }
 
@@ -111,6 +128,7 @@ class HomeActivity : AppCompatActivity() {
             return
         }
         val userId = session.user!!.id
+        actualizarRol(null)
 
         lifecycleScope.launch {
             try {
@@ -123,7 +141,7 @@ class HomeActivity : AppCompatActivity() {
                     .decodeSingleOrNull<NegocioUsuarioDto>()
 
                 if (negocioUsuario != null) {
-                    tvRole.text = negocioUsuario.rol?.replaceFirstChar { it.uppercase() } ?: "Propietario"
+                    actualizarRol(negocioUsuario.rol)
 
                     if (negocioUsuario.negocio_id != null) {
                         val negocio = SupabaseModule.client.from("negocio")
@@ -142,9 +160,10 @@ class HomeActivity : AppCompatActivity() {
                     }
                 } else {
                     tvBusinessName.text = "Sin Negocio ▾"
-                    tvRole.text = "Sin Rol"
+                    actualizarRol(null)
                 }
             } catch (e: Exception) {
+                actualizarRol(null)
                 Log.e("HomeActivity", "Error al consultar Supabase", e)
                 Toast.makeText(this@HomeActivity, "Error de red: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                 tvBusinessName.text = "Error al cargar ▾"

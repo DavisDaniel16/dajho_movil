@@ -46,9 +46,24 @@ class InventarioFragment : Fragment() {
         rvInventario = view.findViewById(R.id.rvInventario)
         fabAgregarProducto = view.findViewById(R.id.fabAgregarProducto)
 
+        fun actualizarAccionesAdministrativas() {
+            fabAgregarProducto.visibility =
+                if ((activity as? HomeActivity)?.esPropietario() == true) View.VISIBLE else View.GONE
+        }
+
+        actualizarAccionesAdministrativas()
+        parentFragmentManager.setFragmentResultListener(
+            HomeActivity.RESULTADO_ROL,
+            viewLifecycleOwner
+        ) { _, _ ->
+            actualizarAccionesAdministrativas()
+        }
+
         fabAgregarProducto.setOnClickListener {
-            val nuevoProductoBottomSheet = NuevoProductoBottomSheet()
-            nuevoProductoBottomSheet.show(childFragmentManager, "NuevoProductoBottomSheet")
+            if ((activity as? HomeActivity)?.esPropietario() == true) {
+                NuevoProductoBottomSheet()
+                    .show(childFragmentManager, "NuevoProductoBottomSheet")
+            }
         }
 
         // Escuchar cuando un producto sea editado o creado para recargar el inventario
@@ -57,8 +72,10 @@ class InventarioFragment : Fragment() {
         }
 
         inventarioAdapter = InventarioAdapter { variante ->
-            val editarBottomSheet = EditarProductoBottomSheet(variante)
-            editarBottomSheet.show(childFragmentManager, "EditarProductoBottomSheet")
+            if ((activity as? HomeActivity)?.esPropietario() == true) {
+                EditarProductoBottomSheet(variante)
+                    .show(childFragmentManager, "EditarProductoBottomSheet")
+            }
         }
 
         rvInventario.layoutManager = LinearLayoutManager(requireContext())

@@ -68,6 +68,22 @@ class HomeFragment : Fragment() {
         btnRegistrarVenta = view.findViewById(R.id.btnRegistrarVenta)
 
         val cardCatalog = view.findViewById<View>(R.id.cardCatalog)
+        val cardEmployees = view.findViewById<View>(R.id.cardEmployees)
+
+        fun actualizarAccesosAdministrativos() {
+            val propietario = (activity as? HomeActivity)?.esPropietario() == true
+            cardCatalog.visibility = if (propietario) View.VISIBLE else View.GONE
+            cardEmployees.visibility = if (propietario) View.VISIBLE else View.GONE
+        }
+
+        actualizarAccesosAdministrativos()
+        parentFragmentManager.setFragmentResultListener(
+            HomeActivity.RESULTADO_ROL,
+            viewLifecycleOwner
+        ) { _, _ ->
+            actualizarAccesosAdministrativos()
+        }
+
         cardCatalog.setOnClickListener {
             Toast.makeText(requireContext(), "Catálogo Virtual próximamente", Toast.LENGTH_SHORT).show()
         }

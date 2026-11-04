@@ -65,6 +65,19 @@ class BalanceFragment : Fragment() {
         progressBar = view.findViewById(R.id.progressBar)
         fabAgregarGasto = view.findViewById(R.id.fabAgregarGasto)
 
+        fun actualizarAccionesAdministrativas() {
+            fabAgregarGasto.visibility =
+                if ((activity as? HomeActivity)?.esPropietario() == true) View.VISIBLE else View.GONE
+        }
+
+        actualizarAccionesAdministrativas()
+        parentFragmentManager.setFragmentResultListener(
+            HomeActivity.RESULTADO_ROL,
+            viewLifecycleOwner
+        ) { _, _ ->
+            actualizarAccionesAdministrativas()
+        }
+
         balanceAdapter = BalanceAdapter { movimiento ->
             DetalleVentaBottomSheet(movimiento.titulo, movimiento.detallesVenta)
                 .show(childFragmentManager, "DetalleVentaBottomSheet")
@@ -78,10 +91,12 @@ class BalanceFragment : Fragment() {
         }
 
         fabAgregarGasto.setOnClickListener {
+            if ((activity as? HomeActivity)?.esPropietario() != true) return@setOnClickListener
+
             val negocioId = userNegocioId
             if (negocioId != null) {
-                val gastoBottomSheet = GastoBottomSheet(negocioId)
-                gastoBottomSheet.show(childFragmentManager, "GastoBottomSheet")
+                GastoBottomSheet(negocioId)
+                    .show(childFragmentManager, "GastoBottomSheet")
             } else {
                 Toast.makeText(requireContext(), "Cargando negocio...", Toast.LENGTH_SHORT).show()
             }

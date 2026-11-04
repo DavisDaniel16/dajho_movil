@@ -3,6 +3,7 @@ package com.example.dajho
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -63,14 +64,20 @@ class PerfilActivity : AppCompatActivity() {
 
         cargarDatosPerfil()
 
-        // Abrir BottomSheet para editar perfil y negocio
+        val esPropietario = intent.getBooleanExtra(
+            HomeActivity.EXTRA_ES_PROPIETARIO,
+            false
+        )
+        ivEditPerfil.visibility = if (esPropietario) View.VISIBLE else View.GONE
+
         ivEditPerfil.setOnClickListener {
-            val editarBottomSheet = EditarPerfilBottomSheet(
+            if (!esPropietario) return@setOnClickListener
+
+            EditarPerfilBottomSheet(
                 nombreActualUsuario = nombreUsuarioActual,
                 nombreActualNegocio = nombreNegocioActual,
                 negocioId = userNegocioId
-            )
-            editarBottomSheet.show(supportFragmentManager, "EditarPerfilBottomSheet")
+            ).show(supportFragmentManager, "EditarPerfilBottomSheet")
         }
 
         // Escuchar resultado de edición de perfil
