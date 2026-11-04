@@ -3,9 +3,11 @@ package com.example.dajho
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -34,7 +36,14 @@ class HomeActivity : AppCompatActivity() {
 
     private lateinit var tvBusinessName: TextView
     private lateinit var tvRole: TextView
+    private lateinit var ivSettings: ImageView
     private lateinit var bottomNav: BottomNavigationView
+
+    private val perfilLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            checkAuthAndLoadData()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,10 +58,17 @@ class HomeActivity : AppCompatActivity() {
 
         tvBusinessName = findViewById(R.id.tvBusinessName)
         tvRole = findViewById(R.id.tvRole)
+        ivSettings = findViewById(R.id.ivSettings)
         bottomNav = findViewById(R.id.bottomNav)
 
         // Cargar datos del negocio en la cabecera compartida
         checkAuthAndLoadData()
+
+        // Abrir PerfilActivity al tocar la rueda dentada
+        ivSettings.setOnClickListener {
+            val intent = Intent(this, PerfilActivity::class.java)
+            perfilLauncher.launch(intent)
+        }
 
         // Cargar HomeFragment por defecto al iniciar
         if (savedInstanceState == null) {
