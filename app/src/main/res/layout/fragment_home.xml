@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -10,9 +10,9 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:fillViewport="true"
         android:clipToPadding="false"
-        android:paddingBottom="16dp">
+        android:fillViewport="false"
+        android:paddingBottom="120dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -41,8 +41,8 @@
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp"
-                android:layout_marginTop="-8dp">
+                android:layout_marginTop="-8dp"
+                android:padding="16dp">
 
                 <!-- Tarjeta de Resumen -->
                 <com.google.android.material.card.MaterialCardView
@@ -86,12 +86,12 @@
                                 android:id="@+id/tvVsAyer"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:paddingHorizontal="8dp"
+                                android:paddingVertical="4dp"
                                 android:text="vs ayer ↑ 0.0%"
                                 android:textColor="#059669"
                                 android:textSize="12sp"
-                                android:textStyle="bold"
-                                android:paddingHorizontal="8dp"
-                                android:paddingVertical="4dp" />
+                                android:textStyle="bold" />
 
                         </com.google.android.material.card.MaterialCardView>
 
@@ -181,10 +181,10 @@
                             android:text="REGISTRAR VENTA"
                             android:textAllCaps="true"
                             android:textSize="15sp"
+                            app:cornerRadius="12dp"
                             app:icon="@drawable/ic_sale"
                             app:iconGravity="textStart"
                             app:iconTint="@android:color/white"
-                            app:cornerRadius="12dp"
                             app:layout_constraintEnd_toEndOf="parent"
                             app:layout_constraintStart_toStartOf="parent"
                             app:layout_constraintTop_toBottomOf="@id/layoutBottomSummary" />
@@ -216,8 +216,8 @@
                         <ImageView
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:src="@drawable/ic_catalog"
                             android:contentDescription="Catálogo"
+                            android:src="@drawable/ic_catalog"
                             app:tint="#3B82F6" />
 
                         <LinearLayout
@@ -264,41 +264,50 @@
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/cardCatalog" />
 
-                <!-- Scroll Horizontal con 4 tarjetas de accesos rápidos -->
-                <HorizontalScrollView
+                <!-- Grid de Accesos Rápidos (2x2) sin constraintBottom_toBottomOf="parent" y con layout_marginBottom="40dp" -->
+                <LinearLayout
+                    android:id="@+id/layoutGridAccesos"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:scrollbars="none"
+                    android:layout_marginBottom="40dp"
+                    android:orientation="vertical"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvDiscover">
 
+                    <!-- Fila 1: Clientes y Proveedores -->
                     <LinearLayout
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:baselineAligned="false"
                         android:orientation="horizontal">
 
                         <!-- 1. Clientes -->
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="100dp"
+                            android:layout_width="0dp"
                             android:layout_height="100dp"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="1"
                             app:cardBackgroundColor="@android:color/white"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="1dp"
                             app:strokeWidth="0dp">
+
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:gravity="center"
                                 android:orientation="vertical">
+
                                 <ImageView
                                     android:layout_width="28dp"
                                     android:layout_height="28dp"
-                                    android:src="@drawable/ic_clients"
                                     android:contentDescription="Clientes"
+                                    android:src="@drawable/ic_clients"
                                     app:tint="#1E293B" />
+
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -311,24 +320,28 @@
 
                         <!-- 2. Proveedores -->
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="100dp"
+                            android:layout_width="0dp"
                             android:layout_height="100dp"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
                             app:cardBackgroundColor="@android:color/white"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="1dp"
                             app:strokeWidth="0dp">
+
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:gravity="center"
                                 android:orientation="vertical">
+
                                 <ImageView
                                     android:layout_width="28dp"
                                     android:layout_height="28dp"
-                                    android:src="@drawable/ic_providers"
                                     android:contentDescription="Proveedores"
+                                    android:src="@drawable/ic_providers"
                                     app:tint="#1E293B" />
+
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -339,26 +352,39 @@
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
 
+                    </LinearLayout>
+
+                    <!-- Fila 2: Empleados y Deudas -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
                         <!-- 3. Empleados -->
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="100dp"
+                            android:layout_width="0dp"
                             android:layout_height="100dp"
-                            android:layout_marginEnd="8dp"
+                            android:layout_marginEnd="6dp"
+                            android:layout_weight="1"
                             app:cardBackgroundColor="@android:color/white"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="1dp"
                             app:strokeWidth="0dp">
+
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:gravity="center"
                                 android:orientation="vertical">
+
                                 <ImageView
                                     android:layout_width="28dp"
                                     android:layout_height="28dp"
-                                    android:src="@drawable/ic_employees"
                                     android:contentDescription="Empleados"
+                                    android:src="@drawable/ic_employees"
                                     app:tint="#1E293B" />
+
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -371,23 +397,28 @@
 
                         <!-- 4. Deudas -->
                         <com.google.android.material.card.MaterialCardView
-                            android:layout_width="100dp"
+                            android:layout_width="0dp"
                             android:layout_height="100dp"
+                            android:layout_marginStart="6dp"
+                            android:layout_weight="1"
                             app:cardBackgroundColor="@android:color/white"
                             app:cardCornerRadius="12dp"
                             app:cardElevation="1dp"
                             app:strokeWidth="0dp">
+
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="match_parent"
                                 android:gravity="center"
                                 android:orientation="vertical">
+
                                 <ImageView
                                     android:layout_width="28dp"
                                     android:layout_height="28dp"
-                                    android:src="@drawable/ic_debts"
                                     android:contentDescription="Deudas"
+                                    android:src="@drawable/ic_debts"
                                     app:tint="#1E293B" />
+
                                 <TextView
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
@@ -399,10 +430,11 @@
                         </com.google.android.material.card.MaterialCardView>
 
                     </LinearLayout>
-                </HorizontalScrollView>
+
+                </LinearLayout>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</FrameLayout>
