@@ -30,12 +30,27 @@ class InventarioAdapter(
     override fun onBindViewHolder(holder: InventarioViewHolder, position: Int) {
         val item = listaVariantes[position]
 
-        holder.tvProductoNombre.text = item.producto?.nombre ?: "Producto"
+        val nombreProd = item.producto?.nombre ?: "Producto"
+        val talla = item.talla ?: ""
+        val color = item.color ?: ""
+
+        val detalleVariante = buildString {
+            if (talla.isNotEmpty()) append("Talla $talla")
+            if (color.isNotEmpty()) {
+                if (isNotEmpty()) append(" / ")
+                append(color)
+            }
+        }
+
+        holder.tvProductoNombre.text = if (detalleVariante.isNotEmpty()) {
+            "$nombreProd ($detalleVariante)"
+        } else {
+            nombreProd
+        }
+
         holder.tvPrecio.text = "$${String.format(Locale.US, "%.2f", item.precio_venta ?: 0.0)}"
 
-        val talla = item.talla ?: "-"
-        val color = item.color ?: "-"
-        holder.tvVarianteInfo.text = "Talla: $talla | Color: $color"
+        holder.tvVarianteInfo.text = "Talla: ${talla.ifEmpty { "-" }} | Color: ${color.ifEmpty { "-" }}"
         holder.tvSku.text = "SKU: ${item.sku ?: "Sin SKU"}"
 
         val stock = item.stock_actual ?: 0

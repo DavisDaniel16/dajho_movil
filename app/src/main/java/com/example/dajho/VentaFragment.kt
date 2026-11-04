@@ -28,6 +28,7 @@ class VentaFragment : Fragment() {
     private lateinit var rvCarrito: RecyclerView
     private lateinit var tvTotal: TextView
     private lateinit var btnCobrar: MaterialButton
+    private lateinit var btnVerCarrito: MaterialButton
 
     private lateinit var productoAdapter: ProductoAdapter
     private lateinit var carritoAdapter: CarritoAdapter
@@ -35,6 +36,7 @@ class VentaFragment : Fragment() {
     private val listaCarrito = mutableListOf<ItemCarritoDto>()
     private var searchJob: Job? = null
     private var userNegocioId: Long? = null
+    private var viendoCarrito: Boolean = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,6 +53,7 @@ class VentaFragment : Fragment() {
         rvCarrito = view.findViewById(R.id.rvCarrito)
         tvTotal = view.findViewById(R.id.tvTotal)
         btnCobrar = view.findViewById(R.id.btnCobrar)
+        btnVerCarrito = view.findViewById(R.id.btnVerCarrito)
 
         // Adaptador de Búsqueda
         productoAdapter = ProductoAdapter { variante ->
@@ -63,16 +66,18 @@ class VentaFragment : Fragment() {
                 item.cantidad = nuevaCantidad
                 carritoAdapter.updateList(listaCarrito.toList())
                 actualizarTotal()
+                actualizarBotonCarrito()
             },
             onItemRemoved = { item ->
                 listaCarrito.remove(item)
                 carritoAdapter.updateList(listaCarrito.toList())
                 actualizarTotal()
+                actualizarBotonCarrito()
             }
         )
 
         rvCarrito.layoutManager = LinearLayoutManager(requireContext())
-        rvCarrito.adapter = productoAdapter // Mostrar lista de productos por defecto
+        rvCarrito.adapter = carritoAdapter // Iniciar viendo el carrito por defecto
 
         // Pre-cargar el negocio_id y cargar los productos iniciales
         lifecycleScope.launch {
@@ -85,19 +90,36 @@ class VentaFragment : Fragment() {
             limpiarCarrito()
         }
 
+        // Botón Ver Carrito / Seguir Comprando
+        btnVerCarrito.setOnClickListener {
+            viendoCarrito = !viendoCarrito
+            if (viendoCarrito) {
+                rvCarrito.adapter = carritoAdapter
+                btnVerCarrito.text = "Seguir Comprando"
+                etSearch.setText("") // Limpiar buscador
+            } else {
+                rvCarrito.adapter = productoAdapter
+                actualizarBotonCarrito()
+            }
+        }
+
         // Búsqueda en tiempo real o recarga de productos si se borra el texto
         etSearch.doAfterTextChanged { text ->
             val query = text.toString().trim()
             searchJob?.cancel()
             if (query.isNotEmpty()) {
+                viendoCarrito = false
                 rvCarrito.adapter = productoAdapter
+                actualizarBotonCarrito()
                 searchJob = lifecycleScope.launch {
                     delay(300)
                     searchProducts(query)
                 }
             } else {
-                rvCarrito.adapter = productoAdapter
-                cargarProductosIniciales()
+                if (!viendoCarrito) {
+                    rvCarrito.adapter = productoAdapter
+                    cargarProductosIniciales()
+                }
             }
         }
 
@@ -112,6 +134,7 @@ class VentaFragment : Fragment() {
         }
 
         actualizarTotal()
+        actualizarBotonCarrito()
     }
 
     private fun cargarProductosIniciales() {
@@ -142,9 +165,14 @@ class VentaFragment : Fragment() {
             listaCarrito.add(ItemCarritoDto(variante, cantidad = 1))
         }
 
-        etSearch.setText("")
+        etSearch.setText("") // Limpia el buscador y restaura la vista
+        viendoCarrito = true
+        rvCarrito.adapter = carritoAdapter
+        btnVerCarrito.text = "Seguir Comprando"
+
         carritoAdapter.updateList(listaCarrito.toList())
         actualizarTotal()
+        actualizarBotonCarrito()
         Toast.makeText(requireContext(), "Producto agregado al carrito", Toast.LENGTH_SHORT).show()
     }
 
@@ -152,7 +180,10 @@ class VentaFragment : Fragment() {
         listaCarrito.clear()
         carritoAdapter.updateList(emptyList())
         etSearch.setText("")
+        viendoCarrito = false
+        rvCarrito.adapter = productoAdapter
         actualizarTotal()
+        actualizarBotonCarrito()
     }
 
     private fun calcularTotal(): Double {
@@ -162,6 +193,11 @@ class VentaFragment : Fragment() {
     private fun actualizarTotal() {
         val total = calcularTotal()
         tvTotal.text = "$${String.format(Locale.US, "%.2f", total)}"
+    }
+
+    private fun actualizarBotonCarrito() {
+        val totalItems = listaCarrito.sumOf { it.cantidad }
+        btnVerCarrito.text = "Ver Carrito ($totalItems)"
     }
 
     private suspend fun getNegocioId(): Long? {

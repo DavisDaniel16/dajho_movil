@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import java.util.Locale
 
 class ProductoAdapter(
     private var listaVariantes: List<VarianteDto> = emptyList(),
@@ -28,12 +29,27 @@ class ProductoAdapter(
     override fun onBindViewHolder(holder: ProductoViewHolder, position: Int) {
         val item = listaVariantes[position]
 
-        holder.tvProductoNombre.text = item.producto?.nombre ?: "Producto"
-        holder.tvPrecio.text = "$${String.format("%.2f", item.precio_venta ?: 0.0)}"
+        val nombreProd = item.producto?.nombre ?: "Producto"
+        val talla = item.talla ?: ""
+        val color = item.color ?: ""
 
-        val talla = item.talla ?: "-"
-        val color = item.color ?: "-"
-        holder.tvVarianteInfo.text = "Talla: $talla | Color: $color"
+        val detalleVariante = buildString {
+            if (talla.isNotEmpty()) append("Talla $talla")
+            if (color.isNotEmpty()) {
+                if (isNotEmpty()) append(" / ")
+                append(color)
+            }
+        }
+
+        holder.tvProductoNombre.text = if (detalleVariante.isNotEmpty()) {
+            "$nombreProd ($detalleVariante)"
+        } else {
+            nombreProd
+        }
+
+        holder.tvPrecio.text = "$${String.format(Locale.US, "%.2f", item.precio_venta ?: 0.0)}"
+
+        holder.tvVarianteInfo.text = "Talla: ${talla.ifEmpty { "-" }} | Color: ${color.ifEmpty { "-" }}"
         holder.tvStock.text = "Stock: ${item.stock_actual ?: 0}"
         holder.tvSku.text = "SKU: ${item.sku ?: "Sin SKU"}"
 

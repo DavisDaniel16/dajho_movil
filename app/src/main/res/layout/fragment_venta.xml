@@ -8,7 +8,7 @@
     android:background="#F8F9FA"
     tools:context=".VentaFragment">
 
-    <!-- Buscador de productos sin topBar amarilla -->
+    <!-- Buscador de productos -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilSearch"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
@@ -31,7 +31,24 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Lista de productos en el carrito -->
+    <!-- Botón para alternar Vista Carrito / Productos -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnVerCarrito"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="wrap_content"
+        android:layout_height="40dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:text="Ver Carrito (0)"
+        android:textColor="#1E293B"
+        app:icon="@android:drawable/ic_menu_add"
+        app:iconTint="#1E293B"
+        app:cornerRadius="20dp"
+        app:strokeColor="#CBD5E1"
+        app:layout_constraintTop_toBottomOf="@id/tilSearch"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- Lista de productos / Carrito -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvCarrito"
         android:layout_width="0dp"
@@ -39,7 +56,7 @@
         android:layout_marginTop="8dp"
         android:paddingHorizontal="16dp"
         android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/tilSearch"
+        app:layout_constraintTop_toBottomOf="@id/btnVerCarrito"
         app:layout_constraintBottom_toTopOf="@id/bottomCheckoutBar"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -96,7 +113,6 @@
                 android:textColor="@android:color/white"
                 android:textSize="15sp"
                 android:textStyle="bold"
-                android:paddingHorizontal="24dp"
                 app:cornerRadius="12dp" />
 
         </LinearLayout>
