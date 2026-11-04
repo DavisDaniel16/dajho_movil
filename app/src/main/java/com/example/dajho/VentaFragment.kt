@@ -62,10 +62,17 @@ class VentaFragment : Fragment() {
 
         carritoAdapter = CarritoAdapter(
             onCantidadChanged = { item, nuevaCantidad ->
-                item.cantidad = nuevaCantidad
-                carritoAdapter.updateList(listaCarrito.toList())
-                actualizarTotal()
-                actualizarBotonCarrito()
+                val stockDisponible = item.variante.stock_actual
+                if (nuevaCantidad > item.cantidad &&
+                    (stockDisponible == null || nuevaCantidad > stockDisponible)
+                ) {
+                    Toast.makeText(requireContext(), "Límite de stock alcanzado", Toast.LENGTH_SHORT).show()
+                } else {
+                    item.cantidad = nuevaCantidad
+                    carritoAdapter.updateList(listaCarrito.toList())
+                    actualizarTotal()
+                    actualizarBotonCarrito()
+                }
             },
             onItemRemoved = { item ->
                 listaCarrito.remove(item)

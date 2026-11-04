@@ -18,31 +18,21 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonArray
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import java.util.Locale
 
-@Serializable
-data class ProductoInsertDto(
-    val nombre: String,
-    val marca: String? = null,
-    val negocio_id: Long
-)
-
-@Serializable
-data class ProductoResultDto(
-    val id: Long? = null
-)
-
-@Serializable
 data class VarianteInsertDto(
-    val producto_id: Long,
-    val negocio_id: Long,
-    val sku: String? = null,
-    val talla: String? = null,
-    val color: String? = null,
-    val precio_costo: Double? = null,
-    val precio_venta: Double? = null,
-    val stock_actual: Int = 0
+    val sku: String,
+    val talla: String?,
+    val color: String?,
+    val precio_costo: Double,
+    val precio_venta: Double,
+    val stock_actual: Int
 )
 
 class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
@@ -131,28 +121,48 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
+        val skus = mutableSetOf<String>()
         val variantesAInsertar = mutableListOf<VarianteInsertDto>()
-        for ((index, v) in listaVariantesInput.withIndex()) {
-            val sku = v.sku.trim()
-            val precioVentaStr = v.precioVenta.trim()
-            val stockStr = v.stock.trim()
 
-            if (sku.isEmpty() || precioVentaStr.isEmpty() || stockStr.isEmpty()) {
-                Toast.makeText(requireContext(), "Completa los campos obligatorios de la Variante #${index + 1}", Toast.LENGTH_SHORT).show()
+        for ((index, v) in listaVariantesInput.withIndex()) {
+            val numero = index + 1
+            val sku = v.sku.trim()
+            val precioVentaTexto = v.precioVenta.trim()
+            val precioCostoTexto = v.precioCosto.trim()
+            val stockTexto = v.stock.trim()
+
+            if (sku.isEmpty() || precioVentaTexto.isEmpty() || stockTexto.isEmpty()) {
+                Toast.makeText(requireContext(), "Completa los campos obligatorios de la Variante #$numero", Toast.LENGTH_SHORT).show()
                 return
             }
 
-            val precioVenta = precioVentaStr.toDoubleOrNull() ?: 0.0
-            val precioCosto = v.precioCosto.trim().toDoubleOrNull() ?: 0.0
-            val stock = stockStr.toIntOrNull() ?: 0
+            if (!skus.add(sku.uppercase(Locale.ROOT))) {
+                Toast.makeText(requireContext(), "El SKU $sku está repetido en el formulario", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val precioVenta = precioVentaTexto.toDoubleOrNull()
+            val precioCosto = if (precioCostoTexto.isEmpty()) 0.0 else precioCostoTexto.toDoubleOrNull()
+            val stock = stockTexto.toIntOrNull()
+
+            if (precioVenta == null || !precioVenta.isFinite() || precioVenta < 0.0 ||
+                precioCosto == null || !precioCosto.isFinite() || precioCosto < 0.0 ||
+                stock == null || stock < 0
+            ) {
+                Toast.makeText(requireContext(), "Precios o stock inválidos en la Variante #$numero", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            if (precioVenta < precioCosto) {
+                Toast.makeText(requireContext(), "El precio de venta no puede ser menor al costo en la Variante #$numero", Toast.LENGTH_SHORT).show()
+                return
+            }
 
             variantesAInsertar.add(
                 VarianteInsertDto(
-                    producto_id = 0L,
-                    negocio_id = 0L,
                     sku = sku,
-                    talla = if (v.talla.trim().isNotEmpty()) v.talla.trim() else null,
-                    color = if (v.color.trim().isNotEmpty()) v.color.trim() else null,
+                    talla = v.talla.trim().takeIf { it.isNotEmpty() },
+                    color = v.color.trim().takeIf { it.isNotEmpty() },
                     precio_costo = precioCosto,
                     precio_venta = precioVenta,
                     stock_actual = stock
@@ -167,50 +177,40 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
                     Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
-                    btnCrearProducto.isEnabled = true
                     return@launch
                 }
 
-                // 1. Insertar Producto (1 vez)
-                val nuevoProducto = ProductoInsertDto(
-                    nombre = nombre,
-                    marca = if (marca.isNotEmpty()) marca else null,
-                    negocio_id = negocioId
-                )
-
-                val productoCreado = SupabaseModule.client.from("producto")
-                    .insert(nuevoProducto) {
-                        select()
-                    }
-                    .decodeSingle<ProductoResultDto>()
-
-                val productoId = productoCreado.id
-                if (productoId == null) {
-                    Toast.makeText(requireContext(), "Error al obtener ID del producto creado", Toast.LENGTH_SHORT).show()
-                    btnCrearProducto.isEnabled = true
-                    return@launch
+                val params = buildJsonObject {
+                    put("p_negocio", negocioId)
+                    put("p_nombre", nombre)
+                    put("p_marca", marca.takeIf { it.isNotEmpty() })
+                    put("p_variantes", buildJsonArray {
+                        variantesAInsertar.forEach { variante ->
+                            add(buildJsonObject {
+                                put("sku", variante.sku)
+                                put("talla", variante.talla)
+                                put("color", variante.color)
+                                put("precio_costo", variante.precio_costo)
+                                put("precio_venta", variante.precio_venta)
+                                put("stock_actual", variante.stock_actual)
+                            })
+                        }
+                    })
                 }
 
-                // 2. Insertar variantes en lote (batch insert)
-                val listaFinalVariantes = variantesAInsertar.map {
-                    it.copy(producto_id = productoId, negocio_id = negocioId)
-                }
-
-                SupabaseModule.client.from("variante").insert(listaFinalVariantes)
+                SupabaseModule.client.postgrest.rpc("crear_producto_con_variantes", params)
 
                 Toast.makeText(requireContext(), "¡Producto y variantes creados con éxito!", Toast.LENGTH_SHORT).show()
-
                 parentFragmentManager.setFragmentResult(
                     "request_inventario_actualizado",
                     bundleOf("actualizado" to true)
                 )
-
                 dismiss()
-
             } catch (e: Exception) {
                 Log.e("NuevoProducto", "Error al crear producto", e)
+                Toast.makeText(requireContext(), "No se pudo guardar el producto", Toast.LENGTH_LONG).show()
+            } finally {
                 btnCrearProducto.isEnabled = true
-                Toast.makeText(requireContext(), "Error al guardar: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
         }
     }
