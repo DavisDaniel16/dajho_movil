@@ -66,7 +66,7 @@ class HomeActivity : AppCompatActivity() {
                     true
                 }
                 R.id.nav_balance -> {
-                    // TODO: BalanceFragment
+                    replaceFragment(BalanceFragment())
                     true
                 }
                 R.id.nav_venta -> {

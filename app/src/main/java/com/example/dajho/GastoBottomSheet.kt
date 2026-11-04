@@ -1,0 +1,131 @@
+package com.example.dajho
+
+import android.app.Dialog
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.core.os.bundleOf
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.textfield.TextInputEditText
+import io.github.jan.supabase.gotrue.auth
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import java.time.LocalDate
+
+@Serializable
+data class GastoInsertDto(
+    val negocio_id: Long,
+    val usuario_id: String,
+    val categoria: String,
+    val monto: Double,
+    val descripcion: String? = null,
+    val fecha: String
+)
+
+class GastoBottomSheet(
+    private val negocioId: Long
+) : BottomSheetDialogFragment() {
+
+    private lateinit var etCategoria: TextInputEditText
+    private lateinit var etMonto: TextInputEditText
+    private lateinit var etDescripcion: TextInputEditText
+    private lateinit var btnGuardarGasto: MaterialButton
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        return inflater.inflate(R.layout.bottom_sheet_gasto, container, false)
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        etCategoria = view.findViewById(R.id.etCategoria)
+        etMonto = view.findViewById(R.id.etMonto)
+        etDescripcion = view.findViewById(R.id.etDescripcion)
+        btnGuardarGasto = view.findViewById(R.id.btnGuardarGasto)
+
+        btnGuardarGasto.setOnClickListener {
+            guardarGasto()
+        }
+    }
+
+    private fun guardarGasto() {
+        val categoria = etCategoria.text.toString().trim()
+        val montoStr = etMonto.text.toString().trim()
+        val descripcion = etDescripcion.text.toString().trim()
+
+        if (categoria.isEmpty() || montoStr.isEmpty()) {
+            Toast.makeText(requireContext(), "Por favor completa la categoría y el monto", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val monto = montoStr.toDoubleOrNull()
+        if (monto == null || monto <= 0.0) {
+            Toast.makeText(requireContext(), "Ingresa un monto válido", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val currentUser = SupabaseModule.client.auth.currentUserOrNull()
+        if (currentUser == null) {
+            Toast.makeText(requireContext(), "No hay sesión de usuario activa", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        btnGuardarGasto.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                val nuevoGasto = GastoInsertDto(
+                    negocio_id = negocioId,
+                    usuario_id = currentUser.id,
+                    categoria = categoria,
+                    monto = monto,
+                    descripcion = if (descripcion.isNotEmpty()) descripcion else null,
+                    fecha = LocalDate.now().toString()
+                )
+
+                SupabaseModule.client.from("gasto").insert(nuevoGasto)
+
+                Toast.makeText(requireContext(), "¡Gasto registrado con éxito!", Toast.LENGTH_SHORT).show()
+
+                parentFragmentManager.setFragmentResult(
+                    "request_balance_actualizado",
+                    bundleOf("actualizado" to true)
+                )
+
+                dismiss()
+            } catch (e: Exception) {
+                Log.e("GastoBottomSheet", "Error al guardar gasto", e)
+                btnGuardarGasto.isEnabled = true
+                Toast.makeText(requireContext(), "Error al guardar: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val dialog = super.onCreateDialog(savedInstanceState) as BottomSheetDialog
+        dialog.setOnShowListener { dialogInterface ->
+            val bottomSheetDialog = dialogInterface as BottomSheetDialog
+            val bottomSheet = bottomSheetDialog.findViewById<View>(
+                com.google.android.material.R.id.design_bottom_sheet
+            )
+            bottomSheet?.let { sheet ->
+                val behavior = BottomSheetBehavior.from(sheet)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+            }
+        }
+        return dialog
+    }
+}

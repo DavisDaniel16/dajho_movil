@@ -31,7 +31,8 @@ data class VentaResumenDto(
 data class GastoResumenDto(
     val id: Long? = null,
     val monto: Double? = null,
-    val fecha: String? = null
+    val fecha: String? = null,
+    val categoria: String? = null
 )
 
 class HomeFragment : Fragment() {
