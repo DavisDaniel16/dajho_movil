@@ -254,7 +254,7 @@
                 android:layout_marginTop="6dp"
                 android:text="Seleccionar cliente"
                 android:textColor="#1E293B"
-                app:icon="@android:drawable/ic_menu_myplaces"
+                app:icon="@drawable/ic_user"
                 app:iconGravity="textStart"
                 app:iconTint="#1E293B"
                 app:cornerRadius="12dp"

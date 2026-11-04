@@ -107,7 +107,7 @@
                         android:clickable="true"
                         android:focusable="true"
                         android:padding="4dp"
-                        android:src="@android:drawable/ic_menu_edit"
+                        android:src="@drawable/ic_edit"
                         android:contentDescription="Editar perfil"
                         app:tint="#3B82F6" />
 
@@ -200,7 +200,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@android:drawable/ic_menu_send"
+                            android:src="@drawable/ic_printer"
                             android:contentDescription="Impresora"
                             app:tint="#1E293B" />
 
@@ -243,7 +243,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@android:drawable/ic_menu_info_details"
+                            android:src="@drawable/ic_terms"
                             android:contentDescription="Términos"
                             app:tint="#1E293B" />
 
@@ -286,7 +286,7 @@
                         <ImageView
                             android:layout_width="24dp"
                             android:layout_height="24dp"
-                            android:src="@android:drawable/ic_menu_view"
+                            android:src="@drawable/ic_privacy"
                             android:contentDescription="Privacidad"
                             app:tint="#1E293B" />
 

@@ -32,7 +32,7 @@
             android:id="@+id/ivEliminar"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:src="@android:drawable/ic_menu_delete"
+            android:src="@drawable/ic_trash"
             android:contentDescription="Eliminar"
             app:tint="#EF4444"
             app:layout_constraintEnd_toEndOf="parent"

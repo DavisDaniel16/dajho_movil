@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <!-- Barra / Asa superior -->
+        <!-- Asa / Barra superior -->
         <View
             android:layout_width="40dp"
             android:layout_height="4dp"
@@ -36,7 +36,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:hint="Buscar cliente por nombre..."
-            app:startIconDrawable="@android:drawable/ic_menu_search"
+            app:startIconDrawable="@drawable/ic_search"
             app:startIconTint="#64748B">
 
             <com.google.android.material.textfield.TextInputEditText

@@ -141,7 +141,7 @@
         android:layout_height="wrap_content"
         android:layout_margin="24dp"
         android:contentDescription="Registrar gasto"
-        android:src="@android:drawable/ic_input_add"
+        android:src="@drawable/ic_minus"
         app:backgroundTint="#EF4444"
         app:tint="@android:color/white"
         app:layout_constraintBottom_toBottomOf="parent"
