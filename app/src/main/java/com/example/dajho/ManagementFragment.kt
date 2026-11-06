@@ -80,7 +80,7 @@ class ManagementFragment : Fragment() {
             try {
                 business = BusinessSession.requireId()
                 if (module == "catalogo") {
-                    val variants = CatalogRepository.load(business)
+                    val variants = CatalogRepository.load(business, context = requireContext())
                     content.removeAllViews()
                     renderHeaderCard("Catálogo Virtual", "Muestra tus productos y comparte con tus clientes") {
                         val lines = variants.map { "${it.producto?.nombre} · ${it.talla.orEmpty()} ${it.color.orEmpty()} · $${it.precio_venta}" }
@@ -1095,7 +1095,7 @@ class ManagementFragment : Fragment() {
             try {
                 val providers = rpc("listar_gestion", buildJsonObject { put("p_modulo", "proveedor") }).decodeAs<JsonArray>()
                 require(providers.isNotEmpty()) { "Registra primero un proveedor" }
-                val variants = CatalogRepository.load(business)
+                val variants = CatalogRepository.load(business, context = requireContext())
                 require(variants.isNotEmpty()) { "Registra primero un producto" }
                 MaterialAlertDialogBuilder(requireContext()).setTitle("Proveedor")
                     .setItems(providers.map { it.jsonObject.str("nombre") }.toTypedArray()) { _, provider ->

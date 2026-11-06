@@ -170,7 +170,7 @@ class VentaFragment : Fragment() {
             try {
                 val negocioId = userNegocioId ?: getNegocioId() ?: return@launch
 
-                val variantes = CatalogRepository.load(negocioId)
+                val variantes = CatalogRepository.load(negocioId, context = requireContext())
 
                 productoAdapter.updateList(variantes)
             } catch (e: Exception) {
@@ -248,7 +248,7 @@ class VentaFragment : Fragment() {
                     return@coroutineScope
                 }
 
-                val variantes = CatalogRepository.load(negocioId, query)
+                val variantes = CatalogRepository.load(negocioId, query, context = requireContext())
 
                 productoAdapter.updateList(variantes)
             } catch (e: Exception) {

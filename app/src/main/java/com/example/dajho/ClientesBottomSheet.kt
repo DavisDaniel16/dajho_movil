@@ -92,7 +92,7 @@ class ClientesBottomSheet() : BottomSheetDialogFragment() {
     private fun cargarClientes() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val clientes = CustomerRepository.clients(negocioId)
+                val clientes = CustomerRepository.clients(negocioId, context = requireContext())
 
                 todosLosClientes = clientes
                 clienteAdapter.updateList(clientes)

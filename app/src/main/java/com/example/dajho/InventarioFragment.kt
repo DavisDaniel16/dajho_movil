@@ -108,7 +108,7 @@ class InventarioFragment : Fragment() {
                 }
                 userNegocioId = negocioId
 
-                val variantes = CatalogRepository.load(negocioId)
+                val variantes = CatalogRepository.load(negocioId, context = requireContext())
 
                 todosLosProductos = variantes
                 aplicarFiltroInventario()
