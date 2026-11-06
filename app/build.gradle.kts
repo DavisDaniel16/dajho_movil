@@ -80,6 +80,11 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.kotlinx.coroutines.android)
 
+    // Room Database
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+
     // Supabase y Ktor
     implementation(libs.supabase.postgrest)
     implementation(libs.supabase.gotrue)
