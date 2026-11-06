@@ -157,6 +157,9 @@ class HomeActivity : AppCompatActivity() {
                 tvBusinessName.text = "${negocio.nombre} ▾"
                 contextoListo = true
                 bottomNav.isEnabled = true
+                membership.negocio_id?.let { negocioId ->
+                    PendingSales.syncPendingSales(this@HomeActivity, negocioId)
+                }
                 if (supportFragmentManager.findFragmentById(R.id.fragmentContainer) == null) replaceFragment(HomeFragment())
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
