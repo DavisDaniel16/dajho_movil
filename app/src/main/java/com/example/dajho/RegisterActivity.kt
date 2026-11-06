@@ -57,8 +57,8 @@ class RegisterActivity : AppCompatActivity() {
             val businessName = etBusinessName.text.toString().trim()
             val businessIdentificacion = etBusinessIdentificacion.text.toString().trim()
             val email = etEmail.text.toString().trim()
-            val password = etPassword.text.toString().trim()
-            val confirmPassword = etConfirmPassword.text.toString().trim()
+            val password = etPassword.text.toString()
+            val confirmPassword = etConfirmPassword.text.toString()
 
             if (name.isEmpty() || businessName.isEmpty() || businessIdentificacion.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
                 Toast.makeText(this, "Por favor completa todos los campos", Toast.LENGTH_SHORT).show()
@@ -70,8 +70,8 @@ class RegisterActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            if (password.length < 6) {
-                Toast.makeText(this, "La contraseña debe tener al menos 6 caracteres", Toast.LENGTH_SHORT).show()
+            if (password.length < 8) {
+                Toast.makeText(this, "La contraseña debe tener al menos 8 caracteres", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
@@ -99,7 +99,7 @@ class RegisterActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     progressBar.visibility = View.GONE
                     btnRegister.isEnabled = true
-                    Toast.makeText(this@RegisterActivity, "Error en el registro: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@RegisterActivity, "Error en el registro: ${e.userMessage()}", Toast.LENGTH_LONG).show()
                 }
             }
         }

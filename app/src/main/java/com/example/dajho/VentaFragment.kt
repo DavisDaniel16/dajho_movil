@@ -21,6 +21,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
 
 class VentaFragment : Fragment() {
 
@@ -55,6 +57,9 @@ class VentaFragment : Fragment() {
         btnCobrar = view.findViewById(R.id.btnCobrar)
         btnVerCarrito = view.findViewById(R.id.btnVerCarrito)
 
+        savedInstanceState?.getString("carrito")?.let {
+            listaCarrito.clear(); listaCarrito.addAll(ScreenArgs.json.decodeFromString<List<ItemCarritoDto>>(it))
+        }
         // Adaptadores
         productoAdapter = ProductoAdapter { variante ->
             agregarAlCarrito(variante)
@@ -86,9 +91,17 @@ class VentaFragment : Fragment() {
         rvCarrito.adapter = productoAdapter // INICIAR MOSTRANDO EL CATÁLOGO DE PRODUCTOS
 
         // Pre-cargar el negocio_id y cargar los productos iniciales
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
             userNegocioId = getNegocioId()
             cargarProductosIniciales()
+            userNegocioId?.let { if (PendingSales.get(requireContext(), it) != null) {
+                btnCobrar.text = "RECUPERAR COBRO PENDIENTE"
+            } }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+            }
         }
 
         // Escuchar evento de venta exitosa para vaciar el carrito
@@ -118,7 +131,7 @@ class VentaFragment : Fragment() {
                     rvCarrito.adapter = productoAdapter
                     actualizarBotonCarrito()
                 }
-                searchJob = lifecycleScope.launch {
+                searchJob = viewLifecycleOwner.lifecycleScope.launch {
                     delay(300)
                     searchProducts(query)
                 }
@@ -131,7 +144,10 @@ class VentaFragment : Fragment() {
 
         btnCobrar.setOnClickListener {
             val total = calcularTotal()
-            if (listaCarrito.isEmpty()) {
+            val pending = userNegocioId?.let { PendingSales.get(requireContext(), it) }
+            if (pending != null) {
+                CobroBottomSheet(0.0, emptyList()).show(parentFragmentManager, "CobroBottomSheet")
+            } else if (listaCarrito.isEmpty()) {
                 Toast.makeText(requireContext(), "El carrito está vacío", Toast.LENGTH_SHORT).show()
             } else {
                 val cobroBottomSheet = CobroBottomSheet(total, listaCarrito.toList())
@@ -139,26 +155,27 @@ class VentaFragment : Fragment() {
             }
         }
 
+        carritoAdapter.updateList(listaCarrito.toList())
         actualizarTotal()
         actualizarBotonCarrito()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("carrito", ScreenArgs.json.encodeToString(listaCarrito.toList()))
+        super.onSaveInstanceState(outState)
+    }
+
     private fun cargarProductosIniciales() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val negocioId = userNegocioId ?: getNegocioId() ?: return@launch
 
-                val variantes = SupabaseModule.client.from("variante")
-                    .select(Columns.raw("*, producto:producto_id(id, nombre)")) {
-                        filter {
-                            eq("negocio_id", negocioId)
-                        }
-                    }
-                    .decodeList<VarianteDto>()
+                val variantes = CatalogRepository.load(negocioId)
 
                 productoAdapter.updateList(variantes)
             } catch (e: Exception) {
-                Log.e("VentaFragment", "Error al cargar productos iniciales", e)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("VentaFragment", "Error al cargar productos iniciales" + ": " + e.userMessage())
             }
         }
     }
@@ -191,7 +208,9 @@ class VentaFragment : Fragment() {
     }
 
     private fun limpiarCarrito() {
+        btnCobrar.text = "COBRAR"
         listaCarrito.clear()
+        cargarProductosIniciales()
         carritoAdapter.updateList(emptyList())
         etSearch.setText("")
         viendoCarrito = false
@@ -201,7 +220,7 @@ class VentaFragment : Fragment() {
     }
 
     private fun calcularTotal(): Double {
-        return listaCarrito.sumOf { it.subtotal }
+        return Money.total(listaCarrito).toDouble()
     }
 
     private fun actualizarTotal() {
@@ -218,45 +237,24 @@ class VentaFragment : Fragment() {
         }
     }
 
-    private suspend fun getNegocioId(): Long? {
-        val currentUser = SupabaseModule.client.auth.currentUserOrNull() ?: return null
-        return try {
-            val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
-                .select {
-                    filter {
-                        eq("usuario_id", currentUser.id)
-                    }
-                }
-                .decodeSingleOrNull<NegocioUsuarioDto>()
-            negocioUsuario?.negocio_id
-        } catch (e: Exception) {
-            Log.e("VentaFragment", "Error al obtener negocio_id", e)
-            null
-        }
-    }
+    private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
 
-    private fun searchProducts(query: String) {
-        lifecycleScope.launch {
+    private suspend fun searchProducts(query: String) {
+        kotlinx.coroutines.coroutineScope {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
                     Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
-                    return@launch
+                    return@coroutineScope
                 }
 
-                val variantes = SupabaseModule.client.from("variante")
-                    .select(Columns.raw("*, producto:producto_id(id, nombre)")) {
-                        filter {
-                            eq("negocio_id", negocioId)
-                            ilike("sku", "%$query%")
-                        }
-                    }
-                    .decodeList<VarianteDto>()
+                val variantes = CatalogRepository.load(negocioId, query)
 
                 productoAdapter.updateList(variantes)
             } catch (e: Exception) {
-                Log.e("VentaFragment", "Error buscando productos", e)
-                Toast.makeText(requireContext(), "Error al buscar: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("VentaFragment", "Error buscando productos" + ": " + e.userMessage())
+                Toast.makeText(requireContext(), "Error al buscar: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
             }
         }
     }

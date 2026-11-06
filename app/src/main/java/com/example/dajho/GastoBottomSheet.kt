@@ -1,5 +1,8 @@
 package com.example.dajho
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+
 import android.app.Dialog
 import android.os.Bundle
 import android.util.Log
@@ -15,7 +18,10 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import io.github.jan.supabase.gotrue.auth
-import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
@@ -30,9 +36,14 @@ data class GastoInsertDto(
     val fecha: String
 )
 
-class GastoBottomSheet(
-    private val negocioId: Long
-) : BottomSheetDialogFragment() {
+class GastoBottomSheet() : BottomSheetDialogFragment() {
+    constructor(negocioId: Long) : this() {
+        arguments = android.os.Bundle().apply {
+            putString("negocioId", ScreenArgs.json.encodeToString(negocioId))
+        }
+    }
+    private val negocioId: Long get() = ScreenArgs.json.decodeFromString(requireArguments().getString("negocioId")!!)
+
 
     private lateinit var etCategoria: TextInputEditText
     private lateinit var etMonto: TextInputEditText
@@ -71,7 +82,7 @@ class GastoBottomSheet(
         }
 
         val monto = montoStr.toDoubleOrNull()
-        if (monto == null || monto <= 0.0) {
+        if (monto == null || !monto.isFinite() || monto <= 0.0) {
             Toast.makeText(requireContext(), "Ingresa un monto válido", Toast.LENGTH_SHORT).show()
             return
         }
@@ -84,7 +95,7 @@ class GastoBottomSheet(
 
         btnGuardarGasto.isEnabled = false
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val nuevoGasto = GastoInsertDto(
                     negocio_id = negocioId,
@@ -95,7 +106,11 @@ class GastoBottomSheet(
                     fecha = LocalDate.now().toString()
                 )
 
-                SupabaseModule.client.from("gasto").insert(nuevoGasto)
+                BusinessOperations.execute(requireContext(), negocioId, "gasto", buildJsonObject {
+                    put("categoria", categoria)
+                    put("monto", Money.json(Money.amount(montoStr)))
+                    put("descripcion", descripcion.takeIf { it.isNotBlank() })
+                })
 
                 Toast.makeText(requireContext(), "¡Gasto registrado con éxito!", Toast.LENGTH_SHORT).show()
 
@@ -106,9 +121,10 @@ class GastoBottomSheet(
 
                 dismiss()
             } catch (e: Exception) {
-                Log.e("GastoBottomSheet", "Error al guardar gasto", e)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("GastoBottomSheet", "Error al guardar gasto" + ": " + e.userMessage())
                 btnGuardarGasto.isEnabled = true
-                Toast.makeText(requireContext(), "Error al guardar: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Error al guardar: ${e.userMessage()}", Toast.LENGTH_LONG).show()
             }
         }
     }

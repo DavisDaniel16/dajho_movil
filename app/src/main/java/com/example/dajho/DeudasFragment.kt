@@ -45,28 +45,14 @@ class DeudasFragment : Fragment() {
         rvDeudas.layoutManager = LinearLayoutManager(requireContext())
         rvDeudas.adapter = deudaAdapter
 
+        childFragmentManager.setFragmentResultListener("deudas_actualizadas", viewLifecycleOwner) { _, _ -> cargarDeudas() }
         cargarDeudas()
     }
 
-    private suspend fun getNegocioId(): Long? {
-        val currentUser = SupabaseModule.client.auth.currentUserOrNull() ?: return null
-        return try {
-            val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
-                .select {
-                    filter {
-                        eq("usuario_id", currentUser.id)
-                    }
-                }
-                .decodeSingleOrNull<NegocioUsuarioDto>()
-            negocioUsuario?.negocio_id
-        } catch (e: Exception) {
-            Log.e("DeudasFragment", "Error al obtener negocio_id", e)
-            null
-        }
-    }
+    private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
 
     private fun cargarDeudas() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
@@ -75,16 +61,7 @@ class DeudasFragment : Fragment() {
                 }
 
                 // Consulta con JOIN anidado: fiado -> cliente, venta -> detalle_venta -> variante -> producto
-                val deudasRaw = SupabaseModule.client.from("fiado")
-                    .select(
-                        Columns.raw("*, cliente:cliente_id(id, nombre, telefono), venta:venta_id(id, fecha_dispositivo, detalle_venta(cantidad, variante:variante_id(producto:producto_id(nombre))))")
-                    ) {
-                        filter {
-                            eq("negocio_id", negocioId)
-                            eq("estado", "abierto")
-                        }
-                    }
-                    .decodeList<DeudaDto>()
+                val deudasRaw = CustomerRepository.debts(negocioId)
 
                 // Agrupar por cliente_id
                 val deudasAgrupadas = deudasRaw.groupBy { it.cliente_id }.map { (clienteId, fiadosCliente) ->
@@ -107,8 +84,9 @@ class DeudasFragment : Fragment() {
                 }
 
             } catch (e: Exception) {
-                Log.e("DeudasFragment", "Error al cargar deudas", e)
-                Toast.makeText(requireContext(), "Error al cargar deudas: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("DeudasFragment", "Error al cargar deudas" + ": " + e.userMessage())
+                Toast.makeText(requireContext(), "Error al cargar deudas: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
             }
         }
     }

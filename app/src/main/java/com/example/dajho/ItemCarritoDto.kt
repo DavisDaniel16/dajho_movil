@@ -1,5 +1,6 @@
 package com.example.dajho
 
+@kotlinx.serialization.Serializable
 data class ItemCarritoDto(
     val variante: VarianteDto,
     var cantidad: Int = 1

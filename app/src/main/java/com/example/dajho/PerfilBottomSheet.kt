@@ -18,11 +18,16 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class UsuarioPerfilDto(
+    val es_administrador: Boolean = false,
     val id: String? = null,
     val nombre: String? = null
 )
@@ -71,7 +76,7 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
             tvUserEmail.text = currentUser.email ?: "Sin correo"
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 if (currentUser == null) return@launch
 
@@ -89,13 +94,7 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
                 }
 
                 // 2. Obtener negocio_id y nombre del negocio
-                val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
-                    .select {
-                        filter {
-                            eq("usuario_id", currentUser.id)
-                        }
-                    }
-                    .decodeSingleOrNull<NegocioUsuarioDto>()
+                val negocioUsuario = BusinessSession.current()
 
                 userNegocioId = negocioUsuario?.negocio_id
 
@@ -114,7 +113,8 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
                 }
 
             } catch (e: Exception) {
-                Log.e("PerfilBottomSheet", "Error al cargar perfil", e)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("PerfilBottomSheet", "Error al cargar perfil" + ": " + e.userMessage())
             }
         }
     }
@@ -128,29 +128,13 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
 
         btnGuardarPerfil.isEnabled = false
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // 1. Actualizar tabla perfil
-                if (nuevoNombreUsuario.isNotEmpty()) {
-                    SupabaseModule.client.from("perfil").update({
-                        set("nombre", nuevoNombreUsuario)
-                    }) {
-                        filter {
-                            eq("id", currentUser.id)
-                        }
-                    }
-                }
-
-                // 2. Actualizar tabla negocio
-                if (nuevoNombreNegocio.isNotEmpty() && userNegocioId != null) {
-                    SupabaseModule.client.from("negocio").update({
-                        set("nombre", nuevoNombreNegocio)
-                    }) {
-                        filter {
-                            eq("id", userNegocioId!!)
-                        }
-                    }
-                }
+                SupabaseModule.client.postgrest.rpc("actualizar_perfil", buildJsonObject {
+                    put("p_nombre", nuevoNombreUsuario)
+                    put("p_negocio", userNegocioId)
+                    put("p_nombre_negocio", nuevoNombreNegocio)
+                })
 
                 Toast.makeText(requireContext(), "¡Perfil actualizado con éxito!", Toast.LENGTH_SHORT).show()
 
@@ -163,25 +147,28 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
                 dismiss()
 
             } catch (e: Exception) {
-                Log.e("PerfilBottomSheet", "Error al guardar perfil", e)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("PerfilBottomSheet", "Error al guardar perfil" + ": " + e.userMessage())
                 btnGuardarPerfil.isEnabled = true
-                Toast.makeText(requireContext(), "Error al guardar: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Error al guardar: ${e.userMessage()}", Toast.LENGTH_LONG).show()
             }
         }
     }
 
     private fun cerrarSesion() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 SupabaseModule.client.auth.signOut()
+                BusinessSession.clear()
                 val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
                 startActivity(intent)
                 requireActivity().finish()
             } catch (e: Exception) {
-                Log.e("PerfilBottomSheet", "Error al cerrar sesión", e)
-                Toast.makeText(requireContext(), "Error al cerrar sesión: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("PerfilBottomSheet", "Error al cerrar sesión" + ": " + e.userMessage())
+                Toast.makeText(requireContext(), "Error al cerrar sesión: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
             }
         }
     }

@@ -1,5 +1,8 @@
 package com.example.dajho
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,10 +12,16 @@ import android.widget.TextView
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import java.util.Locale
 
-class DetalleVentaBottomSheet(
-    private val tituloVenta: String,
-    private val detalles: List<DetalleVentaBalanceDto>
-) : BottomSheetDialogFragment() {
+class DetalleVentaBottomSheet() : BottomSheetDialogFragment() {
+    constructor(tituloVenta: String, detalles: List<DetalleVentaBalanceDto>) : this() {
+        arguments = android.os.Bundle().apply {
+            putString("tituloVenta", ScreenArgs.json.encodeToString(tituloVenta))
+            putString("detalles", ScreenArgs.json.encodeToString(detalles))
+        }
+    }
+    private val tituloVenta: String get() = ScreenArgs.json.decodeFromString(requireArguments().getString("tituloVenta")!!)
+    private val detalles: List<DetalleVentaBalanceDto> get() = ScreenArgs.json.decodeFromString(requireArguments().getString("detalles")!!)
+
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -27,6 +36,19 @@ class DetalleVentaBottomSheet(
 
         view.findViewById<TextView>(R.id.tvTituloDetalleVenta).text = tituloVenta
         val lista = view.findViewById<LinearLayout>(R.id.layoutDetallesVenta)
+        val receiptLines = detalles.map { "${it.variante?.producto?.nombre ?: "Producto"} · ${it.cantidad} × $${it.precio_unitario}" }
+        lista.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+            text = "Imprimir comprobante"
+            setOnClickListener { ReceiptPrinter.print(requireActivity(), tituloVenta, receiptLines) }
+        })
+        lista.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+            text = "Compartir comprobante"
+            setOnClickListener {
+                startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "text/plain"; putExtra(android.content.Intent.EXTRA_TEXT, (listOf(tituloVenta, "DAJHO · Comprobante interno") + receiptLines).joinToString("\n"))
+                }, "Compartir"))
+            }
+        })
 
         if (detalles.isEmpty()) {
             lista.addView(TextView(requireContext()).apply {

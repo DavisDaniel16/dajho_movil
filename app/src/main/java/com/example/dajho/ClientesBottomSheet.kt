@@ -1,5 +1,8 @@
 package com.example.dajho
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+
 import android.app.Dialog
 import android.os.Bundle
 import android.util.Log
@@ -21,9 +24,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class ClientesBottomSheet(
-    private val negocioId: Long
-) : BottomSheetDialogFragment() {
+class ClientesBottomSheet() : BottomSheetDialogFragment() {
+    constructor(negocioId: Long) : this() {
+        arguments = android.os.Bundle().apply {
+            putString("negocioId", ScreenArgs.json.encodeToString(negocioId))
+        }
+    }
+    private val negocioId: Long get() = ScreenArgs.json.decodeFromString(requireArguments().getString("negocioId")!!)
+
 
     private lateinit var etSearch: TextInputEditText
     private lateinit var rvClientes: RecyclerView
@@ -66,7 +74,7 @@ class ClientesBottomSheet(
         etSearch.doAfterTextChanged { text ->
             val query = text.toString().trim()
             searchJob?.cancel()
-            searchJob = lifecycleScope.launch {
+            searchJob = viewLifecycleOwner.lifecycleScope.launch {
                 delay(200)
                 if (query.isEmpty()) {
                     clienteAdapter.updateList(todosLosClientes)
@@ -82,15 +90,9 @@ class ClientesBottomSheet(
     }
 
     private fun cargarClientes() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val clientes = SupabaseModule.client.from("cliente")
-                    .select {
-                        filter {
-                            eq("negocio_id", negocioId)
-                        }
-                    }
-                    .decodeList<ClienteDto>()
+                val clientes = CustomerRepository.clients(negocioId)
 
                 todosLosClientes = clientes
                 clienteAdapter.updateList(clientes)
@@ -99,8 +101,9 @@ class ClientesBottomSheet(
                     Toast.makeText(requireContext(), "No tienes clientes registrados", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Log.e("ClientesBottomSheet", "Error al cargar clientes", e)
-                Toast.makeText(requireContext(), "Error al cargar clientes: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("ClientesBottomSheet", "Error al cargar clientes" + ": " + e.userMessage())
+                Toast.makeText(requireContext(), "Error al cargar clientes: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
             }
         }
     }

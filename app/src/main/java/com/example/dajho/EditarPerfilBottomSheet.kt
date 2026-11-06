@@ -1,5 +1,8 @@
 package com.example.dajho
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+
 import android.app.Dialog
 import android.os.Bundle
 import android.util.Log
@@ -16,13 +19,24 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.launch
 
-class EditarPerfilBottomSheet(
-    private val nombreActualUsuario: String,
-    private val nombreActualNegocio: String,
-    private val negocioId: Long?
-) : BottomSheetDialogFragment() {
+class EditarPerfilBottomSheet() : BottomSheetDialogFragment() {
+    constructor(nombreActualUsuario: String, nombreActualNegocio: String, negocioId: Long?) : this() {
+        arguments = android.os.Bundle().apply {
+            putString("nombreActualUsuario", ScreenArgs.json.encodeToString(nombreActualUsuario))
+            putString("nombreActualNegocio", ScreenArgs.json.encodeToString(nombreActualNegocio))
+            putString("negocioId", ScreenArgs.json.encodeToString(negocioId))
+        }
+    }
+    private val nombreActualUsuario: String get() = ScreenArgs.json.decodeFromString(requireArguments().getString("nombreActualUsuario")!!)
+    private val nombreActualNegocio: String get() = ScreenArgs.json.decodeFromString(requireArguments().getString("nombreActualNegocio")!!)
+    private val negocioId: Long? get() = ScreenArgs.json.decodeFromString(requireArguments().getString("negocioId")!!)
+
 
     private lateinit var etNombreUsuario: TextInputEditText
     private lateinit var etNombreNegocio: TextInputEditText
@@ -45,6 +59,7 @@ class EditarPerfilBottomSheet(
 
         etNombreUsuario.setText(nombreActualUsuario)
         etNombreNegocio.setText(nombreActualNegocio)
+        etNombreNegocio.isEnabled = negocioId != null
 
         btnGuardarCambios.setOnClickListener {
             guardarCambios()
@@ -60,29 +75,13 @@ class EditarPerfilBottomSheet(
 
         btnGuardarCambios.isEnabled = false
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // 1. Actualizar perfil
-                if (nuevoNombreUsuario.isNotEmpty()) {
-                    SupabaseModule.client.from("perfil").update({
-                        set("nombre", nuevoNombreUsuario)
-                    }) {
-                        filter {
-                            eq("id", currentUser.id)
-                        }
-                    }
-                }
-
-                // 2. Actualizar negocio
-                if (nuevoNombreNegocio.isNotEmpty() && negocioId != null) {
-                    SupabaseModule.client.from("negocio").update({
-                        set("nombre", nuevoNombreNegocio)
-                    }) {
-                        filter {
-                            eq("id", negocioId)
-                        }
-                    }
-                }
+                SupabaseModule.client.postgrest.rpc("actualizar_perfil", buildJsonObject {
+                    put("p_nombre", nuevoNombreUsuario)
+                    put("p_negocio", negocioId)
+                    put("p_nombre_negocio", nuevoNombreNegocio)
+                })
 
                 Toast.makeText(requireContext(), "¡Perfil actualizado con éxito!", Toast.LENGTH_SHORT).show()
 
@@ -97,9 +96,10 @@ class EditarPerfilBottomSheet(
                 dismiss()
 
             } catch (e: Exception) {
-                Log.e("EditarPerfil", "Error al actualizar perfil", e)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("EditarPerfil", "Error al actualizar perfil" + ": " + e.userMessage())
                 btnGuardarCambios.isEnabled = true
-                Toast.makeText(requireContext(), "Error al guardar: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Error al guardar: ${e.userMessage()}", Toast.LENGTH_LONG).show()
             }
         }
     }

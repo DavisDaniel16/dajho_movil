@@ -16,6 +16,10 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.card.MaterialCardView
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
@@ -47,7 +51,7 @@ class HomeFragment : Fragment() {
     private lateinit var tvBalanceAmount: TextView
     private lateinit var tvExpensesAmount: TextView
     private lateinit var btnRegistrarVenta: Button
-    private var fechaSeleccionada: LocalDate = LocalDate.now()
+    private var fechaSeleccionada: LocalDate = LocalDate.now(java.time.ZoneId.of("America/Guayaquil"))
     private var metricasJob: Job? = null
 
     override fun onCreateView(
@@ -85,25 +89,28 @@ class HomeFragment : Fragment() {
         }
 
         cardCatalog.setOnClickListener {
-            Toast.makeText(requireContext(), "Catálogo Virtual próximamente", Toast.LENGTH_SHORT).show()
+            (activity as? HomeActivity)?.replaceFragment(ManagementFragment.newInstance("catalogo"))
         }
 
         val ivSearch = requireActivity().findViewById<View>(R.id.ivSearch)
         ivSearch?.setOnClickListener {
-            Toast.makeText(requireContext(), "Buscador global próximamente", Toast.LENGTH_SHORT).show()
+            (activity as? HomeActivity)?.replaceFragment(VentaFragment())
         }
 
         view.findViewById<MaterialCardView>(R.id.cardClients).setOnClickListener {
-            Toast.makeText(requireContext(), "Módulo de Clientes próximamente", Toast.LENGTH_SHORT).show()
+            (activity as? HomeActivity)?.replaceFragment(ManagementFragment.newInstance("cliente"))
         }
         view.findViewById<MaterialCardView>(R.id.cardProviders).setOnClickListener {
-            Toast.makeText(requireContext(), "Módulo de Proveedores próximamente", Toast.LENGTH_SHORT).show()
+            (activity as? HomeActivity)?.replaceFragment(ManagementFragment.newInstance("proveedor"))
         }
-        view.findViewById<MaterialCardView>(R.id.cardEmployees).setOnClickListener {
-            Toast.makeText(requireContext(), "Módulo de Empleados próximamente", Toast.LENGTH_SHORT).show()
+        cardEmployees.setOnClickListener {
+            val homeActivity = activity as? HomeActivity
+            if (homeActivity?.esPropietario() == true) {
+                homeActivity.replaceFragment(EmpleadosFragment())
+            }
         }
         view.findViewById<MaterialCardView>(R.id.cardDebts).setOnClickListener {
-            Toast.makeText(requireContext(), "Módulo de Deudas próximamente", Toast.LENGTH_SHORT).show()
+            (activity as? HomeActivity)?.replaceFragment(DeudasFragment())
         }
 
         generateDynamicDates()
@@ -116,71 +123,20 @@ class HomeFragment : Fragment() {
         cargarMetricasDelDia(fechaSeleccionada)
     }
 
-    private suspend fun getNegocioId(): Long? {
-        val currentUser = SupabaseModule.client.auth.currentUserOrNull() ?: return null
-        return try {
-            val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
-                .select {
-                    filter {
-                        eq("usuario_id", currentUser.id)
-                    }
-                }
-                .decodeSingleOrNull<NegocioUsuarioDto>()
-            negocioUsuario?.negocio_id
-        } catch (e: Exception) {
-            Log.e("HomeFragment", "Error al obtener negocio_id", e)
-            null
-        }
-    }
+    private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
 
     private fun cargarMetricasDelDia(fechaSeleccionada: LocalDate) {
         metricasJob?.cancel()
         metricasJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val negocioId = getNegocioId() ?: return@launch
-                val fechaAnterior = fechaSeleccionada.minusDays(1)
-                val fechaStr = fechaSeleccionada.toString()
-                val fechaAnteriorStr = fechaAnterior.toString()
-
-                // 1. Consultar Ventas de hoy
-                val ventasHoyList = SupabaseModule.client.from("venta")
-                    .select {
-                        filter {
-                            eq("negocio_id", negocioId)
-                            eq("estado", "completada")
-                            gte("fecha_dispositivo", "${fechaStr}T00:00:00")
-                            lte("fecha_dispositivo", "${fechaStr}T23:59:59")
-                        }
-                    }
-                    .decodeList<VentaResumenDto>()
-
-                val totalVentasHoy = ventasHoyList.sumOf { it.total ?: 0.0 }
-
-                // 2. Consultar Ventas de ayer
-                val ventasAyerList = SupabaseModule.client.from("venta")
-                    .select {
-                        filter {
-                            eq("negocio_id", negocioId)
-                            eq("estado", "completada")
-                            gte("fecha_dispositivo", "${fechaAnteriorStr}T00:00:00")
-                            lte("fecha_dispositivo", "${fechaAnteriorStr}T23:59:59")
-                        }
-                    }
-                    .decodeList<VentaResumenDto>()
-
-                val totalVentasAyer = ventasAyerList.sumOf { it.total ?: 0.0 }
-
-                // 3. Consultar Gastos de hoy
-                val gastosList = SupabaseModule.client.from("gasto")
-                    .select {
-                        filter {
-                            eq("negocio_id", negocioId)
-                            eq("fecha", fechaStr)
-                        }
-                    }
-                    .decodeList<GastoResumenDto>()
-
-                val totalGastos = gastosList.sumOf { it.monto ?: 0.0 }
+                val resumen = SupabaseModule.client.postgrest.rpc("resumen_dia", buildJsonObject {
+                    put("p_negocio", negocioId)
+                    put("p_fecha", fechaSeleccionada.toString())
+                }).decodeAs<ResumenDiaDto>()
+                val totalVentasHoy = resumen.ventas
+                val totalVentasAyer = resumen.ayer
+                val totalGastos = resumen.gastos
                 val balance = totalVentasHoy - totalGastos
 
                 // 4. Calcular porcentaje vs ayer
@@ -216,17 +172,18 @@ class HomeFragment : Fragment() {
                 tvBalanceAmount.text = "$${String.format(Locale.US, "%.2f", balance)}"
 
             } catch (e: Exception) {
-                Log.e("HomeFragment", "Error al cargar métricas del día", e)
-                tvSalesAmount.text = "$0.00"
-                tvExpensesAmount.text = "$0.00"
-                tvBalanceAmount.text = "$0.00"
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("HomeFragment", "Error al cargar métricas del día" + ": " + e.userMessage())
+                tvSalesAmount.text = "Sin conexión"
+                tvExpensesAmount.text = "Sin conexión"
+                tvBalanceAmount.text = "Sin conexión"
             }
         }
     }
 
     private fun generateDynamicDates() {
         layoutFechas.removeAllViews()
-        val today = LocalDate.now()
+        val today = LocalDate.now(java.time.ZoneId.of("America/Guayaquil"))
         val formatter = DateTimeFormatter.ofPattern("d MMM", Locale("es", "ES"))
 
         for (i in -4..0) {

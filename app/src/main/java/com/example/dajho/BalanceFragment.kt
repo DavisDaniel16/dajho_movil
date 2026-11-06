@@ -16,6 +16,10 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.util.Locale
@@ -105,26 +109,11 @@ class BalanceFragment : Fragment() {
         cargarDatosBalance()
     }
 
-    private suspend fun getNegocioId(): Long? {
-        val currentUser = SupabaseModule.client.auth.currentUserOrNull() ?: return null
-        return try {
-            val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
-                .select {
-                    filter {
-                        eq("usuario_id", currentUser.id)
-                    }
-                }
-                .decodeSingleOrNull<NegocioUsuarioDto>()
-            negocioUsuario?.negocio_id
-        } catch (e: Exception) {
-            Log.e("BalanceFragment", "Error al obtener negocio_id", e)
-            null
-        }
-    }
+    private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
 
     private fun cargarDatosBalance() {
         progressBar.visibility = View.VISIBLE
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
@@ -133,68 +122,12 @@ class BalanceFragment : Fragment() {
                 }
                 userNegocioId = negocioId
 
-                // 1. Consultar Ventas (Ingresos) completadas
-                val ventas = SupabaseModule.client.from("venta")
-                    .select(
-                        Columns.raw(
-                            "id,total,fecha_dispositivo," +
-                                "detalle_venta(cantidad,precio_unitario," +
-                                "variante:variante_id(producto:producto_id(nombre)))"
-                        )
-                    ) {
-                        filter {
-                            eq("negocio_id", negocioId)
-                            eq("estado", "completada")
-                        }
-                    }
-                    .decodeList<VentaBalanceDto>()
-
-                // 2. Consultar Gastos (Egresos)
-                val gastos = SupabaseModule.client.from("gasto")
-                    .select {
-                        filter {
-                            eq("negocio_id", negocioId)
-                        }
-                    }
-                    .decodeList<GastoResumenDto>()
-
-                // 3. Combinar y mapear movimientos
-                val listaMovimientos = mutableListOf<MovimientoDto>()
-
-                ventas.forEach { venta ->
-                    val fechaStr = venta.fecha_dispositivo?.take(10) ?: "Fecha desconocida"
-                    listaMovimientos.add(
-                        MovimientoDto(
-                            titulo = "Venta #${venta.id ?: ""}",
-                            tipo = "ingreso",
-                            monto = venta.total ?: 0.0,
-                            fecha = fechaStr,
-                            detallesVenta = venta.detalle_venta.orEmpty()
-                        )
-                    )
-                }
-
-                gastos.forEach { gasto ->
-                    val fechaStr = gasto.fecha?.take(10) ?: "Fecha desconocida"
-                    val tituloGasto = if (!gasto.categoria.isNullOrEmpty()) gasto.categoria else "Gasto"
-                    listaMovimientos.add(
-                        MovimientoDto(
-                            titulo = tituloGasto,
-                            tipo = "egreso",
-                            monto = gasto.monto ?: 0.0,
-                            fecha = fechaStr
-                        )
-                    )
-                }
-
-                // Ordenar por fecha descendente
-                listaMovimientos.sortByDescending { it.fecha }
-
-                balanceAdapter.updateList(listaMovimientos)
-
-                // 4. Calcular Totales y Balance Neto
-                val totalIngresos = ventas.sumOf { it.total ?: 0.0 }
-                val totalEgresos = gastos.sumOf { it.monto ?: 0.0 }
+                val balance = SupabaseModule.client.postgrest.rpc("balance_negocio", buildJsonObject {
+                    put("p_negocio", negocioId)
+                }).decodeAs<BalanceNegocioDto>()
+                balanceAdapter.updateList(balance.movimientos)
+                val totalIngresos = balance.ingresos
+                val totalEgresos = balance.egresos
                 val balanceNeto = totalIngresos - totalEgresos
 
                 tvTotalIngresos.text = "$${String.format(Locale.US, "%.2f", totalIngresos)}"
@@ -202,8 +135,9 @@ class BalanceFragment : Fragment() {
                 tvBalanceNeto.text = "$${String.format(Locale.US, "%.2f", balanceNeto)}"
 
             } catch (e: Exception) {
-                Log.e("BalanceFragment", "Error al cargar balance", e)
-                Toast.makeText(requireContext(), "Error al cargar balance: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("BalanceFragment", "Error al cargar balance" + ": " + e.userMessage())
+                Toast.makeText(requireContext(), "Error al cargar balance: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
             } finally {
                 progressBar.visibility = View.GONE
             }

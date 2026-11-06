@@ -1,5 +1,8 @@
 package com.example.dajho
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+
 import android.app.Dialog
 import android.content.res.ColorStateList
 import android.graphics.Color
@@ -28,11 +31,18 @@ import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import java.util.Locale
+import kotlinx.serialization.json.JsonObject
 
-class CobroBottomSheet(
-    private val totalOriginal: Double,
-    private val listaCarrito: List<ItemCarritoDto>
-) : BottomSheetDialogFragment() {
+class CobroBottomSheet() : BottomSheetDialogFragment() {
+    constructor(totalOriginal: Double, listaCarrito: List<ItemCarritoDto>) : this() {
+        arguments = android.os.Bundle().apply {
+            putString("totalOriginal", ScreenArgs.json.encodeToString(totalOriginal))
+            putString("listaCarrito", ScreenArgs.json.encodeToString(listaCarrito))
+        }
+    }
+    private val totalOriginal: Double get() = ScreenArgs.json.decodeFromString(requireArguments().getString("totalOriginal")!!)
+    private val listaCarrito: List<ItemCarritoDto> get() = ScreenArgs.json.decodeFromString(requireArguments().getString("listaCarrito")!!)
+
 
     private lateinit var tvTotalOriginal: TextView
     private lateinit var etDescuento: TextInputEditText
@@ -56,11 +66,14 @@ class CobroBottomSheet(
     private lateinit var btnConfirmarVenta: MaterialButton
 
     private var metodoPagoSeleccionado: String = "Efectivo"
-    private var totalCalculado: Double = totalOriginal
+    private var totalCalculado: Double = 0.0
 
     private var clienteSeleccionadoId: Long? = null
     private var clienteSeleccionadoNombre: String? = null
     private var userNegocioId: Long? = null
+    private var pendingPayload: JsonObject? = null
+    private lateinit var etAbonoInicial: android.widget.EditText
+    private lateinit var etVencimiento: android.widget.EditText
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -91,18 +104,44 @@ class CobroBottomSheet(
 
         layoutFiado = view.findViewById(R.id.layoutFiado)
         btnSeleccionarCliente = view.findViewById(R.id.btnSeleccionarCliente)
+        etAbonoInicial = android.widget.EditText(requireContext()).apply {
+            hint = "Abono inicial en efectivo (opcional)"
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER or android.text.InputType.TYPE_NUMBER_FLAG_DECIMAL
+            id = R.id.etAbonoInicial
+        }
+        etVencimiento = android.widget.EditText(requireContext()).apply {
+            hint = "Vencimiento AAAA-MM-DD (opcional)"; id = R.id.etVencimientoFiado
+        }
+        layoutFiado.addView(etAbonoInicial)
+        layoutFiado.addView(etVencimiento)
+        metodoPagoSeleccionado = savedInstanceState?.getString("metodo") ?: "Efectivo"
+        clienteSeleccionadoId = savedInstanceState?.getLong("cliente")?.takeIf { it > 0 }
+        clienteSeleccionadoNombre = savedInstanceState?.getString("cliente_nombre")
+        clienteSeleccionadoNombre?.let { btnSeleccionarCliente.text = "Cliente: $it" }
 
         btnConfirmarVenta = view.findViewById(R.id.btnConfirmarVenta)
 
         // Cargar negocio_id
-        lifecycleScope.launch {
+        btnConfirmarVenta.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
             userNegocioId = getNegocioId()
+            val business = userNegocioId ?: return@launch
+            pendingPayload = PendingSales.get(requireContext(), business)
+            if (pendingPayload != null) {
+                showPending(requireNotNull(pendingPayload))
+            }
+            btnConfirmarVenta.isEnabled = true
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+            }
         }
 
         // Inicializar total y estilos por defecto
         tvTotalOriginal.text = "$${String.format(Locale.US, "%.2f", totalOriginal)}"
         recalcularTotalFinal()
-        actualizarEstilosBotones("Efectivo")
+        seleccionarMetodo(metodoPagoSeleccionado)
 
         // Recalcular total al ingresar descuento
         etDescuento.doAfterTextChanged {
@@ -130,25 +169,10 @@ class CobroBottomSheet(
         }
     }
 
-    private suspend fun getNegocioId(): Long? {
-        val currentUser = SupabaseModule.client.auth.currentUserOrNull() ?: return null
-        return try {
-            val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
-                .select {
-                    filter {
-                        eq("usuario_id", currentUser.id)
-                    }
-                }
-                .decodeSingleOrNull<NegocioUsuarioDto>()
-            negocioUsuario?.negocio_id
-        } catch (e: Exception) {
-            Log.e("CobroBottomSheet", "Error al obtener negocio_id", e)
-            null
-        }
-    }
+    private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
 
     private fun abrirBottomSheetClientes() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val negocioId = userNegocioId ?: getNegocioId()
             if (negocioId == null) {
                 Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
@@ -173,7 +197,7 @@ class CobroBottomSheet(
     private fun recalcularTotalFinal() {
         val descuentoStr = etDescuento.text.toString().trim()
         val descuento = descuentoStr.toDoubleOrNull() ?: 0.0
-        totalCalculado = (totalOriginal - descuento).coerceAtLeast(0.0)
+        totalCalculado = (Money.total(listaCarrito) - Money.decimal(descuento)).max(java.math.BigDecimal.ZERO).toDouble()
         tvTotalFinal.text = "$${String.format(Locale.US, "%.2f", totalCalculado)}"
         recalcularCambio()
     }
@@ -236,6 +260,12 @@ class CobroBottomSheet(
     }
 
     private fun confirmarVenta() {
+        pendingPayload?.let { submitPending(it); return }
+        val discount = runCatching { Money.amount(etDescuento.text.toString().ifBlank { "0" }) }.getOrNull()
+        if (discount == null || discount.signum() < 0 || totalCalculado <= 0) {
+            Toast.makeText(requireContext(), "Revisa el descuento y el total (mayor que cero)", Toast.LENGTH_LONG).show()
+            return
+        }
         when (metodoPagoSeleccionado) {
             "Efectivo" -> {
                 val recibidoStr = etMontoRecibido.text.toString().trim()
@@ -262,7 +292,7 @@ class CobroBottomSheet(
 
         btnConfirmarVenta.isEnabled = false
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
@@ -271,6 +301,10 @@ class CobroBottomSheet(
                     return@launch
                 }
 
+                val abonoInicial = if (metodoPagoSeleccionado == "Fiado") Money.amount(etAbonoInicial.text.toString().ifBlank { "0" }) else java.math.BigDecimal.ZERO
+                require(abonoInicial.signum() >= 0 && abonoInicial < Money.decimal(totalCalculado)) { "El abono debe ser menor al total y no negativo" }
+                val vencimiento = etVencimiento.text.toString().trim().takeIf { it.isNotBlank() }
+                if (metodoPagoSeleccionado == "Fiado" && vencimiento != null) require(!java.time.LocalDate.parse(vencimiento).isBefore(java.time.LocalDate.now(java.time.ZoneId.of("America/Guayaquil")))) { "La fecha no puede ser anterior a hoy" }
                 val uuidDispositivo = java.util.UUID.randomUUID().toString()
                 val fechaDispositivo = java.time.OffsetDateTime.now().toString()
 
@@ -283,13 +317,16 @@ class CobroBottomSheet(
                         add(buildJsonObject {
                             put("variante_id", item.variante.id)
                             put("cantidad", item.cantidad)
-                            put("precio_unitario", item.variante.precio_venta ?: 0.0)
+                            put("precio_unitario", Money.json(Money.decimal(requireNotNull(item.variante.precio_venta))))
                         })
                     }
                 }
 
                 // 2. Construir JSON de pagos (p_pagos)
                 val pagosJson = buildJsonArray {
+                    if (abonoInicial.signum() > 0) add(buildJsonObject {
+                        put("metodo", "efectivo"); put("monto", Money.json(abonoInicial))
+                    })
                     add(buildJsonObject {
                         val metodoClean = when (metodoPagoSeleccionado) {
                             "Fiado" -> "fiado"
@@ -299,15 +336,15 @@ class CobroBottomSheet(
                             else -> metodoPagoSeleccionado.lowercase(Locale.ROOT)
                         }
                         put("metodo", metodoClean)
-                        put("monto", totalCalculado)
+                        put("monto", Money.json(Money.decimal(totalCalculado) - abonoInicial))
 
                         if (metodoPagoSeleccionado == "Transferencia" || metodoPagoSeleccionado == "QR") {
                             put("referencia", etReferencia.text.toString().trim())
                         }
 
                         if (metodoPagoSeleccionado == "Fiado") {
-                            put("modalidad", "sin_fecha")
-                            put("fecha_vencimiento", null as String?)
+                            put("modalidad", if (vencimiento == null) "sin_fecha" else "fecha_fija")
+                            put("fecha_vencimiento", vencimiento)
                         }
                     })
                 }
@@ -320,14 +357,18 @@ class CobroBottomSheet(
                     put("p_cliente", if (metodoPagoSeleccionado == "Fiado") clienteSeleccionadoId else null)
                     put("p_nota_preimpresa", null as String?)
                     put("p_identificacion_comprador", null as String?)
-                    put("p_descuento", descuento)
+                    put("p_descuento", Money.json(Money.amount(descuentoStr.ifBlank { "0" })))
                     put("p_descuento_motivo", "Regateo")
                     put("p_items", itemsJson)
                     put("p_pagos", pagosJson)
                 }
 
                 // 4. Llamada RPC a Supabase
+                PendingSales.save(requireContext(), negocioId, params)
+                pendingPayload = params
+                showPending(params)
                 SupabaseModule.client.postgrest.rpc("registrar_venta", params)
+                PendingSales.clear(requireContext(), negocioId)
 
                 Toast.makeText(requireContext(), "¡Venta registrada con éxito!", Toast.LENGTH_LONG).show()
 
@@ -340,11 +381,58 @@ class CobroBottomSheet(
                 dismiss()
 
             } catch (e: Exception) {
-                Log.e("CobroBottomSheet", "Error al registrar venta", e)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is io.github.jan.supabase.exceptions.RestException && e.statusCode in listOf(400, 409, 422)) {
+                    userNegocioId?.let { PendingSales.clear(requireContext(), it) }
+                    pendingPayload = null
+                    etDescuento.isEnabled = true
+                    listOf(btnEfectivo, btnTransferencia, btnQR, btnFiado, btnSeleccionarCliente).forEach { it.isEnabled = true }
+                    btnConfirmarVenta.text = "Confirmar venta"
+                    recalcularTotalFinal()
+                }
+                Log.e("CobroBottomSheet", "Error al registrar venta" + ": " + e.userMessage())
                 btnConfirmarVenta.isEnabled = true
-                Toast.makeText(requireContext(), "Error al registrar venta: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Error al registrar venta: ${e.userMessage()}", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun submitPending(payload: JsonObject) {
+        btnConfirmarVenta.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                SupabaseModule.client.postgrest.rpc("registrar_venta", payload)
+                PendingSales.clear(requireContext(), requireNotNull(userNegocioId))
+                parentFragmentManager.setFragmentResult("request_venta_exitosa", Bundle().apply { putBoolean("exito", true) })
+                dismiss()
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e is io.github.jan.supabase.exceptions.RestException && e.statusCode in listOf(400, 409, 422)) {
+                    PendingSales.clear(requireContext(), requireNotNull(userNegocioId))
+                    Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+                    dismiss()
+                } else Toast.makeText(context, "El cobro sigue pendiente. Reintenta al recuperar la conexión.", Toast.LENGTH_LONG).show()
+            } finally { btnConfirmarVenta.isEnabled = true }
+        }
+    }
+
+    private fun showPending(payload: JsonObject) {
+        btnConfirmarVenta.text = "Resolver cobro pendiente"
+        etDescuento.isEnabled = false
+        listOf(btnEfectivo, btnTransferencia, btnQR, btnFiado, btnSeleccionarCliente).forEach { it.isEnabled = false }
+        val payments = payload["p_pagos"] as kotlinx.serialization.json.JsonArray
+        val summary = payments.joinToString(" + ") { payment ->
+            val item = payment as JsonObject
+            "${item.str("metodo")}: $${item.str("monto")}"
+        }
+        tvTotalFinal.text = "Cobro guardado: $summary"
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putString("metodo", metodoPagoSeleccionado)
+        clienteSeleccionadoId?.let { outState.putLong("cliente", it) }
+        outState.putString("cliente_nombre", clienteSeleccionadoNombre)
+        super.onSaveInstanceState(outState)
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {

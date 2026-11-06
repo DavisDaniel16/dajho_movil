@@ -1,5 +1,8 @@
 package com.example.dajho
 
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+
 import android.app.Dialog
 import android.os.Bundle
 import android.util.Log
@@ -16,13 +19,25 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-class EditarProductoBottomSheet(
-    private val variante: VarianteDto
-) : BottomSheetDialogFragment() {
+class EditarProductoBottomSheet() : BottomSheetDialogFragment() {
+    constructor(variante: VarianteDto) : this() {
+        arguments = android.os.Bundle().apply {
+            putString("variante", ScreenArgs.json.encodeToString(variante))
+        }
+    }
+    private val variante: VarianteDto get() = ScreenArgs.json.decodeFromString(requireArguments().getString("variante")!!)
 
+
+    private var stockEsperado: Int? = null
     private lateinit var tvProductoNombre: TextView
     private lateinit var tvSku: TextView
     private lateinit var etStock: TextInputEditText
@@ -47,6 +62,15 @@ class EditarProductoBottomSheet(
         etPrecioVenta = view.findViewById(R.id.etPrecioVenta)
         etPrecioCosto = view.findViewById(R.id.etPrecioCosto)
         btnGuardarCambios = view.findViewById(R.id.btnGuardarCambios)
+        (btnGuardarCambios.parent as android.view.ViewGroup).addView(MaterialButton(requireContext()).apply {
+            text = "Nombre, marca, categoría y temporada"
+            setOnClickListener {
+                variante.producto_id?.let { id -> editProduct(id) {
+                    parentFragmentManager.setFragmentResult("request_inventario_actualizado", Bundle.EMPTY)
+                    dismiss()
+                } }
+            }
+        })
 
         // Pre-llenar datos
         val nombre = variante.producto?.nombre ?: "Producto"
@@ -55,12 +79,50 @@ class EditarProductoBottomSheet(
         tvProductoNombre.text = "$nombre ($talla / $color)"
         tvSku.text = "SKU: ${variante.sku ?: "Sin SKU"}"
 
-        etStock.setText(variante.stock_actual?.toString() ?: "0")
+        etStock.setText("")
+        btnGuardarCambios.isEnabled = false
         etPrecioVenta.setText(String.format(Locale.US, "%.2f", variante.precio_venta ?: 0.0))
         etPrecioCosto.setText(String.format(Locale.US, "%.2f", variante.precio_costo ?: 0.0))
 
         btnGuardarCambios.setOnClickListener {
             guardarCambios()
+        }
+        cargarStockActual()
+    }
+
+    private fun cargarStockActual() {
+        val varianteId = variante.id
+        if (varianteId == null) {
+            etStock.error = "No se pudo identificar la variante"
+            return
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            try {
+                val actual = SupabaseModule.client.from("variante")
+                    .select(Columns.raw("id,stock_actual")) {
+                        filter {
+                            eq("id", varianteId)
+                        }
+                    }
+                    .decodeSingle<VarianteDto>()
+
+                val stock = actual.stock_actual
+                if (stock == null) {
+                    etStock.error = "La variante no tiene stock registrado"
+                    return@launch
+                }
+
+                stockEsperado = stock
+                etStock.setText(stock.toString())
+                btnGuardarCambios.isEnabled = true
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("EditarProducto", "Error al consultar stock" + ": " + e.userMessage())
+                Toast.makeText(requireContext(), "No se pudo consultar el stock actual", Toast.LENGTH_LONG).show()
+            }
         }
     }
 
@@ -73,7 +135,7 @@ class EditarProductoBottomSheet(
         val nuevoPrecioVenta = precioVentaStr.toDoubleOrNull()
         val nuevoPrecioCosto = precioCostoStr.toDoubleOrNull()
 
-        if (nuevoStock == null || nuevoPrecioVenta == null || nuevoPrecioCosto == null) {
+        if (nuevoStock == null || nuevoStock < 0 || nuevoPrecioVenta == null || !nuevoPrecioVenta.isFinite() || nuevoPrecioCosto == null || !nuevoPrecioCosto.isFinite() || nuevoPrecioCosto <= 0 || nuevoPrecioVenta < nuevoPrecioCosto) {
             Toast.makeText(requireContext(), "Por favor ingresa valores válidos", Toast.LENGTH_SHORT).show()
             return
         }
@@ -86,20 +148,18 @@ class EditarProductoBottomSheet(
 
         btnGuardarCambios.isEnabled = false
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 // Actualizar variante en Supabase
-                SupabaseModule.client.from("variante").update(
-                    {
-                        set("stock_actual", nuevoStock)
-                        set("precio_venta", nuevoPrecioVenta)
-                        set("precio_costo", nuevoPrecioCosto)
-                    }
-                ) {
-                    filter {
-                        eq("id", varianteId)
-                    }
-                }
+                SupabaseModule.client.postgrest.rpc("editar_variante", buildJsonObject {
+                    put("p_negocio", BusinessSession.requireId())
+                    put("p_variante", varianteId)
+                    put("p_stock_esperado", requireNotNull(stockEsperado))
+                    put("p_stock", nuevoStock)
+                    put("p_costo", Money.json(Money.amount(precioCostoStr)))
+                    put("p_precio", Money.json(Money.amount(precioVentaStr)))
+                    put("p_motivo", "Conteo físico desde inventario")
+                })
 
                 Toast.makeText(requireContext(), "¡Producto actualizado con éxito!", Toast.LENGTH_SHORT).show()
 
@@ -112,9 +172,10 @@ class EditarProductoBottomSheet(
                 dismiss()
 
             } catch (e: Exception) {
-                Log.e("EditarProducto", "Error al actualizar producto", e)
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("EditarProducto", "Error al actualizar producto" + ": " + e.userMessage())
                 btnGuardarCambios.isEnabled = true
-                Toast.makeText(requireContext(), "Error al actualizar: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), "Error al actualizar: ${e.userMessage()}", Toast.LENGTH_LONG).show()
             }
         }
     }

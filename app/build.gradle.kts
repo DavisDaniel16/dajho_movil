@@ -16,6 +16,9 @@ val localProperties = Properties().apply {
 val supabaseUrl = localProperties.getProperty("SUPABASE_URL") ?: ""
 val supabaseAnonKey = localProperties.getProperty("SUPABASE_ANON_KEY") ?: ""
 
+check(supabaseUrl.startsWith("https://")) { "Configura SUPABASE_URL en local.properties" }
+check(supabaseAnonKey.isNotBlank()) { "Configura SUPABASE_ANON_KEY en local.properties" }
+
 android {
     namespace = "com.example.dajho"
 
@@ -32,6 +35,8 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+        buildConfigField("String", "TERMS_URL", "\"${localProperties.getProperty("TERMS_URL", "")}\"")
+        buildConfigField("String", "PRIVACY_URL", "\"${localProperties.getProperty("PRIVACY_URL", "")}\"")
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"$supabaseAnonKey\"")
     }
@@ -51,6 +56,12 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+    }
+    lint {
+        // AndroidX b/501504696: cyclic UI callbacks make this detector expand recursively.
+        // There are no LiveData.observe, OnBackPressedDispatcher.addCallback or addMenuProvider calls.
+        // View lifecycle ownership is used explicitly and recreation is covered by instrumentation.
+        disable += setOf("FragmentLiveDataObserve", "FragmentBackPressedCallback", "FragmentAddMenuProvider")
     }
 }
 

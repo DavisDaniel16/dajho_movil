@@ -17,6 +17,8 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.launch
 
 class PerfilActivity : AppCompatActivity() {
@@ -68,15 +70,14 @@ class PerfilActivity : AppCompatActivity() {
             HomeActivity.EXTRA_ES_PROPIETARIO,
             false
         )
-        ivEditPerfil.visibility = if (esPropietario) View.VISIBLE else View.GONE
+        ivEditPerfil.visibility = View.VISIBLE
 
         ivEditPerfil.setOnClickListener {
-            if (!esPropietario) return@setOnClickListener
 
             EditarPerfilBottomSheet(
                 nombreActualUsuario = nombreUsuarioActual,
                 nombreActualNegocio = nombreNegocioActual,
-                negocioId = userNegocioId
+                negocioId = if (esPropietario) userNegocioId else null
             ).show(supportFragmentManager, "EditarPerfilBottomSheet")
         }
 
@@ -95,24 +96,30 @@ class PerfilActivity : AppCompatActivity() {
         }
 
         btnComprarPlan.setOnClickListener {
-            Toast.makeText(this, "¡Próximamente planes premium disponibles!", Toast.LENGTH_SHORT).show()
+            setResult(RESULT_OK, Intent().putExtra("abrir_modulo", "planes")); finish()
         }
 
         menuImpresora.setOnClickListener {
-            Toast.makeText(this, "Configuración de impresora Bluetooth próximamente", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(android.provider.Settings.ACTION_PRINT_SETTINGS))
         }
 
         menuTerminos.setOnClickListener {
-            Toast.makeText(this, "Términos y Condiciones de DAJHO", Toast.LENGTH_SHORT).show()
+            openLegal(BuildConfig.TERMS_URL)
         }
 
         menuPrivacidad.setOnClickListener {
-            Toast.makeText(this, "Política de Privacidad de DAJHO", Toast.LENGTH_SHORT).show()
+            openLegal(BuildConfig.PRIVACY_URL)
         }
 
         btnCerrarSesion.setOnClickListener {
             cerrarSesion()
         }
+    }
+
+    private fun openLegal(url: String) {
+        if (url.isBlank()) {
+            Toast.makeText(this, "El enlace oficial aún no ha sido configurado por DAJHO", Toast.LENGTH_LONG).show()
+        } else startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
     }
 
     private fun cargarDatosPerfil() {
@@ -125,6 +132,14 @@ class PerfilActivity : AppCompatActivity() {
             try {
                 if (currentUser == null) return@launch
 
+                if (BusinessSession.current() != null) {
+                    val planData = SupabaseModule.client.postgrest.rpc("listar_gestion", kotlinx.serialization.json.buildJsonObject {
+                        put("p_negocio", kotlinx.serialization.json.JsonPrimitive(BusinessSession.requireId()))
+                        put("p_modulo", kotlinx.serialization.json.JsonPrimitive("planes"))
+                    }).decodeAs<kotlinx.serialization.json.JsonObject>()
+                    val subscription = planData["suscripcion"] as? kotlinx.serialization.json.JsonObject
+                    findViewById<TextView>(R.id.tvPlanActual).text = "Plan: ${subscription?.str("estado") ?: "Sin suscripción"}"
+                }
                 // 1. Obtener nombre del usuario de la tabla 'perfil'
                 val usuario = SupabaseModule.client.from("perfil")
                     .select {
@@ -140,13 +155,7 @@ class PerfilActivity : AppCompatActivity() {
                 }
 
                 // 2. Obtener negocio_id y nombre del negocio
-                val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
-                    .select {
-                        filter {
-                            eq("usuario_id", currentUser.id)
-                        }
-                    }
-                    .decodeSingleOrNull<NegocioUsuarioDto>()
+                val negocioUsuario = BusinessSession.current()
 
                 userNegocioId = negocioUsuario?.negocio_id
 
@@ -165,7 +174,7 @@ class PerfilActivity : AppCompatActivity() {
                 }
 
             } catch (e: Exception) {
-                Log.e("PerfilActivity", "Error al cargar perfil", e)
+                Log.e("PerfilActivity", "Error al cargar perfil" + ": " + e.userMessage())
             }
         }
     }
@@ -174,14 +183,15 @@ class PerfilActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 SupabaseModule.client.auth.signOut()
+                BusinessSession.clear()
                 val intent = Intent(this@PerfilActivity, LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }
                 startActivity(intent)
                 finish()
             } catch (e: Exception) {
-                Log.e("PerfilActivity", "Error al cerrar sesión", e)
-                Toast.makeText(this@PerfilActivity, "Error al cerrar sesión: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Log.e("PerfilActivity", "Error al cerrar sesión" + ": " + e.userMessage())
+                Toast.makeText(this@PerfilActivity, "Error al cerrar sesión: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
             }
         }
     }
