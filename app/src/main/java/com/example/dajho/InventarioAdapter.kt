@@ -50,14 +50,19 @@ class InventarioAdapter(
 
         holder.tvPrecio.text = "$${String.format(Locale.US, "%.2f", item.precio_venta ?: 0.0)}"
 
-        holder.tvVarianteInfo.text = "Talla: ${talla.ifEmpty { "-" }} | Color: ${color.ifEmpty { "-" }}"
-        holder.tvSku.text = "SKU: ${item.sku ?: "Sin SKU"}"
+        holder.tvVarianteInfo.text =
+            "Talla: ${item.talla?.takeIf { it.isNotBlank() } ?: "Sin talla"} | " +
+                "Color: ${item.color?.takeIf { it.isNotBlank() } ?: "Sin color"}"
+        val skuText = "SKU: ${item.sku ?: "Sin SKU"}"
+        val barcodeText = if (!item.codigo_barras.isNullOrBlank()) "  ·  CB: ${item.codigo_barras}" else ""
+        holder.tvSku.text = "$skuText$barcodeText"
 
         val stock = item.stock_actual ?: 0
+        val stockMinimo = item.stock_minimo ?: 5
         holder.tvStock.text = "Stock: $stock"
 
-        // Alerta de stock bajo (rojo si es menor a 5)
-        if (stock < 5) {
+        // Alerta de stock bajo (rojo si es menor o igual al stock mínimo configurado)
+        if (stock <= stockMinimo) {
             holder.tvStock.setTextColor(Color.parseColor("#EF4444")) // Rojo
         } else {
             holder.tvStock.setTextColor(Color.parseColor("#10B981")) // Verde

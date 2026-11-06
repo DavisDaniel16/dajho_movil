@@ -16,6 +16,7 @@ import com.google.android.material.textfield.TextInputEditText
 import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -29,6 +30,7 @@ class InventarioFragment : Fragment() {
 
     private var todosLosProductos = listOf<VarianteDto>()
     private var searchJob: Job? = null
+    private var cargaInventarioJob: Job? = null
     private var userNegocioId: Long? = null
 
     override fun onCreateView(
@@ -84,72 +86,59 @@ class InventarioFragment : Fragment() {
         cargarInventario()
 
         // Filtrado en tiempo real
-        etSearch.doAfterTextChanged { text ->
-            val query = text.toString().trim()
+        etSearch.doAfterTextChanged {
             searchJob?.cancel()
-            searchJob = lifecycleScope.launch {
+            searchJob = viewLifecycleOwner.lifecycleScope.launch {
                 delay(200)
-                if (query.isEmpty()) {
-                    inventarioAdapter.updateList(todosLosProductos)
-                } else {
-                    val filtrados = todosLosProductos.filter {
-                        (it.producto?.nombre ?: "").contains(query, ignoreCase = true) ||
-                        (it.sku ?: "").contains(query, ignoreCase = true) ||
-                        (it.talla ?: "").contains(query, ignoreCase = true) ||
-                        (it.color ?: "").contains(query, ignoreCase = true)
-                    }
-                    inventarioAdapter.updateList(filtrados)
-                }
+                aplicarFiltroInventario()
             }
         }
     }
 
-    private suspend fun getNegocioId(): Long? {
-        val currentUser = SupabaseModule.client.auth.currentUserOrNull() ?: return null
-        return try {
-            val negocioUsuario = SupabaseModule.client.from("negocio_usuario")
-                .select {
-                    filter {
-                        eq("usuario_id", currentUser.id)
-                    }
-                }
-                .decodeSingleOrNull<NegocioUsuarioDto>()
-            negocioUsuario?.negocio_id
-        } catch (e: Exception) {
-            Log.e("InventarioFragment", "Error al obtener negocio_id", e)
-            null
-        }
-    }
+    private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
 
     private fun cargarInventario() {
-        lifecycleScope.launch {
+        cargaInventarioJob?.cancel()
+        cargaInventarioJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
                     Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
                     return@launch
                 }
+                userNegocioId = negocioId
 
-                // Consulta a la tabla variante con el JOIN del producto
-                val variantes = SupabaseModule.client.from("variante")
-                    .select(Columns.raw("*, producto:producto_id(id, nombre)")) {
-                        filter {
-                            eq("negocio_id", negocioId)
-                        }
-                    }
-                    .decodeList<VarianteDto>()
+                val variantes = CatalogRepository.load(negocioId)
 
                 todosLosProductos = variantes
-                inventarioAdapter.updateList(variantes)
+                aplicarFiltroInventario()
 
                 if (variantes.isEmpty()) {
                     Toast.makeText(requireContext(), "No tienes productos en el inventario", Toast.LENGTH_SHORT).show()
                 }
-
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                Log.e("InventarioFragment", "Error al cargar inventario", e)
-                Toast.makeText(requireContext(), "Error al cargar inventario: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("InventarioFragment", "Error al cargar inventario" + ": " + e.userMessage())
+                Toast.makeText(requireContext(), "No se pudo actualizar el inventario", Toast.LENGTH_LONG).show()
             }
         }
+    }
+
+    private fun aplicarFiltroInventario() {
+        val query = etSearch.text.toString().trim()
+        val visibles = if (query.isEmpty()) {
+            todosLosProductos
+        } else {
+            todosLosProductos.filter {
+                it.producto?.nombre.orEmpty().contains(query, ignoreCase = true) ||
+                    it.sku.orEmpty().contains(query, ignoreCase = true) ||
+                    it.codigo_barras.orEmpty().contains(query, ignoreCase = true) ||
+                    it.talla.orEmpty().contains(query, ignoreCase = true) ||
+                    it.color.orEmpty().contains(query, ignoreCase = true)
+            }
+        }
+        inventarioAdapter.updateList(visibles)
     }
 }

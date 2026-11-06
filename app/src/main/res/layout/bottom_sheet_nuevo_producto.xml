@@ -72,6 +72,50 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <!-- Categoría y Temporada -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal">
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilCategoriaProducto"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:hint="Categoría">
+
+                <AutoCompleteTextView
+                    android:id="@+id/actCategoriaProducto"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"
+                    android:text="Sin categoría" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilTemporadaProducto"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:hint="Temporada">
+
+                <AutoCompleteTextView
+                    android:id="@+id/actTemporadaProducto"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"
+                    android:text="Sin temporada" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+        </LinearLayout>
+
         <!-- Sección 2: Variantes -->
         <LinearLayout
             android:layout_width="match_parent"
