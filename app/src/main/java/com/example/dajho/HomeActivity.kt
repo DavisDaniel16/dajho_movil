@@ -11,7 +11,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.fragment.app.Fragment
@@ -40,7 +39,7 @@ data class NegocioDto(
 )
 
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : ProtectedActivity() {
 
     private lateinit var tvBusinessName: TextView
     private lateinit var tvRole: TextView

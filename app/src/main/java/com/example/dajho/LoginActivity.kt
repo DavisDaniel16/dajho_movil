@@ -149,6 +149,7 @@ class LoginActivity : AppCompatActivity() {
 
                     btnLogin.isEnabled = true
 
+                    SupabaseModule.client.auth.currentUserOrNull()?.id?.let(AppSessionLock::onLogin)
                     Toast.makeText(this@LoginActivity, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
                     val intent = Intent(this@LoginActivity, HomeActivity::class.java)
                     startActivity(intent)

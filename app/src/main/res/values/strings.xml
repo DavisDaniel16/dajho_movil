@@ -1,3 +1,13 @@
 <resources>
     <string name="app_name">DAJHO</string>
+    <string name="lock_title">DAJHO está bloqueado</string>
+    <string name="lock_message">Confirma tu identidad para continuar con tu sesión.</string>
+    <string name="lock_unlock">Desbloquear</string>
+    <string name="lock_sign_out">Cerrar sesión e ir al login</string>
+    <string name="lock_setup">Configurar bloqueo del dispositivo</string>
+    <string name="lock_no_credential">Configura un PIN, patrón o contraseña en el dispositivo, o vuelve a iniciar sesión con tu cuenta.</string>
+    <string name="lock_retry">La app sigue bloqueada. Puedes volver a intentarlo.</string>
+    <string name="lock_failed">No se reconoció la biometría. Inténtalo de nuevo.</string>
+    <string name="lock_device_credential">Usar PIN, patrón o contraseña</string>
+    <string name="lock_settings_unavailable">Abre los ajustes de seguridad del dispositivo para configurar su bloqueo.</string>
 </resources>

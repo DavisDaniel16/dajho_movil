@@ -22,9 +22,10 @@ class ProfileThemeTest {
         try {
             prefs.edit().putBoolean("dark_mode", false).commit()
             instrumentation.runOnMainSync {
+                AppSessionLock.onLogin("profile-theme-user")
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
             }
-            ActivityScenario.launch(PerfilActivity::class.java).use { scenario ->
+            ActivityScenario.launch(ProfileThemeHostActivity::class.java).use { scenario ->
                 for (dark in listOf(true, false)) {
                     scenario.onActivity { activity ->
                         activity.findViewById<SwitchMaterial>(R.id.switchModoOscuro).isChecked = dark
@@ -45,7 +46,10 @@ class ProfileThemeTest {
             prefs.edit().apply {
                 if (hadPreference) putBoolean("dark_mode", savedPreference) else remove("dark_mode")
             }.commit()
-            instrumentation.runOnMainSync { AppCompatDelegate.setDefaultNightMode(previousMode) }
+            instrumentation.runOnMainSync {
+                AppSessionLock.clear()
+                AppCompatDelegate.setDefaultNightMode(previousMode)
+            }
         }
     }
 }

@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.activity.ktx)
+    implementation("androidx.biometric:biometric:1.1.0")
 
     // Serialization
     implementation(libs.kotlinx.serialization.json)

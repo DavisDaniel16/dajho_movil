@@ -2,5 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity android:name=".RestorationHostActivity" android:exported="false" />
+        <activity android:name=".LockTestHostActivity" android:exported="false" />
+        <activity android:name=".ProfileThemeHostActivity" android:exported="false" />
     </application>
 </manifest>
