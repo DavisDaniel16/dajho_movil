@@ -23,10 +23,18 @@ data class ModuloGestionItem(
     val soloPropietario: Boolean = false
 )
 
-class GestionNegocioBottomSheet(
-    private val esPropietario: Boolean = false,
-    private val onSelectModule: (String) -> Unit = {}
-) : BottomSheetDialogFragment() {
+class GestionNegocioBottomSheet() : BottomSheetDialogFragment() {
+    constructor(esPropietario: Boolean) : this() {
+        arguments = Bundle().apply { putBoolean("es_propietario", esPropietario) }
+    }
+
+    companion object {
+        const val RESULTADO_MODULO = "gestion_modulo_seleccionado"
+        const val CLAVE_MODULO = "modulo"
+    }
+
+    private val esPropietario: Boolean
+        get() = arguments?.getBoolean("es_propietario", false) ?: false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,14 +52,15 @@ class GestionNegocioBottomSheet(
         val allModules = listOf(
             ModuloGestionItem("caja", "Caja", "Apertura, cierre y control de efectivo", R.drawable.ic_balance, "#DCFCE7"),
             ModuloGestionItem("cliente", "Clientes", "Directorio, contacto y datos de clientes", R.drawable.ic_clients, "#DBEAFE"),
-            ModuloGestionItem("planes", "Planes y pagos", "Suscripción activa, límites y comprobantes", R.drawable.ic_shopping_bag, "#FEF08A"),
+            ModuloGestionItem("planes", "Planes y pagos", "Suscripción activa, límites y comprobantes", R.drawable.ic_shopping_bag, "#E0F2FE"),
             ModuloGestionItem("proveedor", "Proveedores", "Gestión y contactos de proveedores", R.drawable.ic_providers, "#E0E7FF", soloPropietario = true),
             ModuloGestionItem("compra", "Compras", "Registro e historial de compras de insumos", R.drawable.ic_cart, "#FFEDD5", soloPropietario = true),
             ModuloGestionItem("categoria", "Categorías", "Clasificación y catálogo de categorías", R.drawable.ic_catalog, "#F3E8FF", soloPropietario = true),
             ModuloGestionItem("temporada", "Temporadas", "Organización de productos por temporada", R.drawable.ic_inventory, "#FCE7F3", soloPropietario = true),
             ModuloGestionItem("ventas", "Historial de ventas", "Listado completo y anulación de ventas", R.drawable.ic_sale, "#DCFCE7", soloPropietario = true),
             ModuloGestionItem("movimiento_inventario", "Movimientos de inventario", "Auditoría de entradas, salidas y stock", R.drawable.ic_inventory, "#E0E7FF", soloPropietario = true),
-            ModuloGestionItem("acceso_soporte", "Acceso de soporte", "Autorización y permisos para soporte técnico", R.drawable.ic_privacy, "#FEF08A", soloPropietario = true)
+            ModuloGestionItem("configuracion", "Configuración y perfil", "Ajustes de cuenta, perfil del negocio y preferencias", R.drawable.ic_settings, "#F1F5F9"),
+            ModuloGestionItem("acceso_soporte", "Acceso de soporte", "Autorización y permisos para soporte técnico", R.drawable.ic_privacy, "#E0F2FE", soloPropietario = true)
         )
 
         val availableModules = allModules.filter { !it.soloPropietario || esPropietario }
@@ -74,7 +83,10 @@ class GestionNegocioBottomSheet(
 
             card.setOnClickListener {
                 dismiss()
-                onSelectModule(item.key)
+                parentFragmentManager.setFragmentResult(
+                    RESULTADO_MODULO,
+                    Bundle().apply { putString(CLAVE_MODULO, item.key) }
+                )
             }
 
             container.addView(itemView)

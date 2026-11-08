@@ -3,9 +3,7 @@ package com.example.dajho
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.View
 import android.widget.Button
-import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -31,7 +29,6 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var etPassword: TextInputEditText
     private lateinit var btnLogin: Button
     private lateinit var tvRegister: TextView
-    private lateinit var progressBar: ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,7 +45,6 @@ class LoginActivity : AppCompatActivity() {
         etPassword = findViewById(R.id.etPassword)
         btnLogin = findViewById(R.id.btnLogin)
         tvRegister = findViewById(R.id.tvRegister)
-        progressBar = findViewById(R.id.progressBar)
 
         findViewById<TextView>(R.id.tvForgotPassword).setOnClickListener {
             val email = etEmail.text.toString().trim()
@@ -75,14 +71,12 @@ class LoginActivity : AppCompatActivity() {
                 val tokenHash = uri.getQueryParameter("token_hash")
 
                 if (tokenHash != null) {
-                    progressBar.visibility = View.VISIBLE
                     lifecycleScope.launch {
                         try {
                             SupabaseModule.client.auth.verifyEmailOtp(
                                 type = OtpType.Email.EMAIL,
                                 tokenHash = tokenHash
                             )
-                            progressBar.visibility = View.GONE
                             Toast.makeText(
                                 this@LoginActivity,
                                 "Correo confirmado. Ahora puedes iniciar sesión",
@@ -90,7 +84,6 @@ class LoginActivity : AppCompatActivity() {
                             ).show()
                             intent.data = null // Limpiar el intent para evitar re-verificaciones
                         } catch (e: Exception) {
-                            progressBar.visibility = View.GONE
                             Toast.makeText(
                                 this@LoginActivity,
                                 "Error al confirmar correo: ${e.userMessage()}",
@@ -111,14 +104,15 @@ class LoginActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            progressBar.visibility = View.VISIBLE
             btnLogin.isEnabled = false
 
             lifecycleScope.launch {
                 try {
-                    SupabaseModule.client.auth.signInWith(Email) {
-                        this.email = email
-                        this.password = password
+                    retryLoginOnNetworkFailure {
+                        SupabaseModule.client.auth.signInWith(Email) {
+                            this.email = email
+                            this.password = password
+                        }
                     }
 
                     val currentUser = SupabaseModule.client.auth.currentUserOrNull()
@@ -127,30 +121,32 @@ class LoginActivity : AppCompatActivity() {
                         val negocioUsuario = BusinessSession.current()
 
                         // 2. Si NO tiene negocio, crearlo usando los metadatos del registro
-                        val profile = SupabaseModule.client.from("perfil").select {
-                            filter { eq("id", currentUser.id) }
-                        }.decodeSingle<UsuarioPerfilDto>()
-                        if (negocioUsuario == null && !profile.es_administrador) {
-                            val metadata = currentUser.userMetadata
-                            val negocioNombre = metadata?.get("negocio_nombre")?.toString()?.replace("\"", "") ?: error("Falta el nombre del negocio en el registro")
-                            val negocioIdentificacion = metadata?.get("negocio_identificacion")?.toString()?.replace("\"", "") ?: error("Falta la identificación del negocio en el registro")
+                        val profile = runCatching {
+                            SupabaseModule.client.from("perfil").select {
+                                filter { eq("id", currentUser.id) }
+                            }.decodeSingleOrNull<UsuarioPerfilDto>()
+                        }.getOrNull()
 
-                            try {
-                                SupabaseModule.client.postgrest.rpc(
-                                    "crear_negocio",
-                                    buildJsonObject {
-                                        put("p_nombre", negocioNombre)
-                                        put("p_identificacion", negocioIdentificacion)
-                                        put("p_direccion", "Sin dirección")
-                                    }
-                                )
-                            } catch (rpcError: Exception) {
-                                throw rpcError
+                        if (negocioUsuario == null && profile?.es_administrador != true) {
+                            val metadata = currentUser.userMetadata
+                            val negocioNombre = metadata?.get("negocio_nombre")?.toString()?.replace("\"", "")
+                            val negocioIdentificacion = metadata?.get("negocio_identificacion")?.toString()?.replace("\"", "")
+
+                            if (!negocioNombre.isNullOrBlank() && !negocioIdentificacion.isNullOrBlank()) {
+                                runCatching {
+                                    SupabaseModule.client.postgrest.rpc(
+                                        "crear_negocio",
+                                        buildJsonObject {
+                                            put("p_nombre", negocioNombre)
+                                            put("p_identificacion", negocioIdentificacion)
+                                            put("p_direccion", "Sin dirección")
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
 
-                    progressBar.visibility = View.GONE
                     btnLogin.isEnabled = true
 
                     Toast.makeText(this@LoginActivity, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
@@ -158,7 +154,7 @@ class LoginActivity : AppCompatActivity() {
                     startActivity(intent)
                     finish()
                 } catch (e: Exception) {
-                    progressBar.visibility = View.GONE
+                    if (e is kotlinx.coroutines.CancellationException) throw e
                     btnLogin.isEnabled = true
                     Toast.makeText(this@LoginActivity, "Error: ${e.userMessage()}", Toast.LENGTH_LONG).show()
                 }

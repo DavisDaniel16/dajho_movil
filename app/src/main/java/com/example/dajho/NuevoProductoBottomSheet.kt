@@ -28,6 +28,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.put
 import java.util.Locale
 
@@ -131,17 +132,26 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
 
     private suspend fun cargarCategoriasYTemporadas(negocioId: Long) {
         try {
-            val catPage = SupabaseModule.client.postgrest.rpc("listar_gestion", buildJsonObject {
-                put("p_negocio", negocioId)
-                put("p_modulo", "categoria")
-            }).decodeAs<JsonArray>().map { it.jsonObject }
-            categoriasList = catPage
-
-            val tempPage = SupabaseModule.client.postgrest.rpc("listar_gestion", buildJsonObject {
-                put("p_negocio", negocioId)
-                put("p_modulo", "temporada")
-            }).decodeAs<JsonArray>().map { it.jsonObject }
-            temporadasList = tempPage
+            suspend fun options(module: String): List<JsonObject> {
+                val db = DajhoDatabase.getInstance(requireContext())
+                val params = buildJsonObject {
+                    put("p_negocio", negocioId)
+                    put("p_modulo", module)
+                }
+                if (requireContext().hasInternetConnection()) {
+                    try {
+                        val res = SupabaseModule.client.postgrest.rpc("listar_gestion", params)
+                        db.saveGestionItems(negocioId, module, res.data)
+                        return res.decodeAs<JsonArray>().map { it.jsonObject }
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                    }
+                }
+                val localStr = db.getGestionItems(negocioId, module) ?: "[]"
+                return ScreenArgs.json.parseToJsonElement(localStr).jsonArray.map { it.jsonObject }
+            }
+            categoriasList = options("categoria")
+            temporadasList = options("temporada")
 
             if (isAdded) {
                 val catNombres = listOf("Sin categoría") + categoriasList.map { it.str("nombre") }
@@ -274,9 +284,16 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
                     })
                 }
 
-                SupabaseModule.client.postgrest.rpc("crear_producto_con_variantes", params)
+                val reqId = java.util.UUID.randomUUID().toString()
+                val rpcPayload = buildJsonObject {
+                    put("p_negocio", negocioId)
+                    put("p_solicitud", reqId)
+                    put("p_datos", params)
+                }
 
-                Toast.makeText(requireContext(), "¡Producto y variantes creados con éxito!", Toast.LENGTH_SHORT).show()
+                SyncManager.enqueueAndTrySync(requireContext(), negocioId, "crear_producto_offline", rpcPayload, reqId)
+
+                Toast.makeText(requireContext(), "Producto registrado", Toast.LENGTH_SHORT).show()
                 parentFragmentManager.setFragmentResult(
                     "request_inventario_actualizado",
                     bundleOf("actualizado" to true)

@@ -150,16 +150,26 @@ class EditarProductoBottomSheet() : BottomSheetDialogFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                // Actualizar variante en Supabase
-                SupabaseModule.client.postgrest.rpc("editar_variante", buildJsonObject {
-                    put("p_negocio", BusinessSession.requireId())
+                // Actualizar variante localmente (Offline First)
+                val negocio = BusinessSession.requireId(requireContext())
+                val payload = buildJsonObject {
+                    put("p_negocio", negocio)
                     put("p_variante", varianteId)
                     put("p_stock_esperado", requireNotNull(stockEsperado))
                     put("p_stock", nuevoStock)
                     put("p_costo", Money.json(Money.amount(precioCostoStr)))
                     put("p_precio", Money.json(Money.amount(precioVentaStr)))
                     put("p_motivo", "Conteo físico desde inventario")
-                })
+                }
+
+                // Actualizar stock local si se modificó
+                val db = DajhoDatabase.getInstance(requireContext())
+                val diff = (stockEsperado ?: 0) - nuevoStock
+                if (diff != 0) {
+                    db.updateStockLocally(negocio, varianteId, diff)
+                }
+
+                SyncManager.enqueueAndTrySync(requireContext(), negocio, "editar_variante", payload)
 
                 Toast.makeText(requireContext(), "¡Producto actualizado con éxito!", Toast.LENGTH_SHORT).show()
 

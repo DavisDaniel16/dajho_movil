@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:fillViewport="true"
-    android:background="@android:color/white"
+    android:background="@color/bg_app"
     tools:context=".RegisterActivity">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -23,7 +23,7 @@
             android:layout_marginTop="24dp"
             android:src="@drawable/ic_user_avatar"
             android:contentDescription="Icono de registro"
-            app:tint="#1E293B"
+            app:tint="@color/text_primary"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
@@ -34,7 +34,7 @@
             android:text="Crea tu cuenta"
             android:textSize="28sp"
             android:textStyle="bold"
-            android:textColor="@android:color/black"
+            android:textColor="@color/text_primary"
             android:layout_marginTop="16dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
@@ -177,7 +177,8 @@
             android:text="Registrarse"
             android:textAllCaps="false"
             android:textSize="16sp"
-            android:backgroundTint="#1E293B"
+            android:textColor="@color/white"
+            android:backgroundTint="@color/sky"
             app:cornerRadius="12dp"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent"

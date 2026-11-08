@@ -71,7 +71,6 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
     private var clienteSeleccionadoId: Long? = null
     private var clienteSeleccionadoNombre: String? = null
     private var userNegocioId: Long? = null
-    private var pendingPayload: JsonObject? = null
     private lateinit var etAbonoInicial: android.widget.EditText
     private lateinit var etVencimiento: android.widget.EditText
 
@@ -126,11 +125,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
             userNegocioId = getNegocioId()
-            val business = userNegocioId ?: return@launch
-            pendingPayload = PendingSales.get(requireContext(), business)
-            if (pendingPayload != null) {
-                showPending(requireNotNull(pendingPayload))
-            }
+            if (userNegocioId == null) return@launch
             btnConfirmarVenta.isEnabled = true
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -260,7 +255,6 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
     }
 
     private fun confirmarVenta() {
-        pendingPayload?.let { submitPending(it); return }
         val discount = runCatching { Money.amount(etDescuento.text.toString().ifBlank { "0" }) }.getOrNull()
         if (discount == null || discount.signum() < 0 || totalCalculado <= 0) {
             Toast.makeText(requireContext(), "Revisa el descuento y el total (mayor que cero)", Toast.LENGTH_LONG).show()
@@ -363,12 +357,29 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
                     put("p_pagos", pagosJson)
                 }
 
-                // 4. Llamada RPC a Supabase
-                PendingSales.save(requireContext(), negocioId, params)
-                pendingPayload = params
-                showPending(params)
-                SupabaseModule.client.postgrest.rpc("registrar_venta", params)
-                PendingSales.clear(requireContext(), negocioId)
+                // 4. Verificar que la caja esté abierta antes de confirmar la venta
+                val db = DajhoDatabase.getInstance(requireContext())
+                if (!db.isCajaAbierta(negocioId)) {
+                    Toast.makeText(requireContext(), "No puedes registrar ventas con la caja cerrada. Abre la caja primero.", Toast.LENGTH_LONG).show()
+                    btnConfirmarVenta.isEnabled = true
+                    return@launch
+                }
+
+                for (item in listaCarrito) {
+                    item.variante.id?.let { vId ->
+                        db.updateStockLocally(negocioId, vId, item.cantidad)
+                    }
+                }
+                val fechaHoy = java.time.LocalDate.now().toString()
+                db.addVentaLocalAResumen(negocioId, fechaHoy, totalCalculado)
+
+                if (metodoPagoSeleccionado == "Fiado" && clienteSeleccionadoId != null) {
+                    val montoFiado = totalCalculado - abonoInicial.toDouble()
+                    db.abonarDeudaClienteLocally(negocioId, clienteSeleccionadoId!!, -montoFiado)
+                }
+
+                // 5. Encolar operación para sincronización con Supabase
+                SyncManager.enqueueAndTrySync(requireContext(), negocioId, "registrar_venta", params)
 
                 Toast.makeText(requireContext(), "¡Venta registrada con éxito!", Toast.LENGTH_LONG).show()
 
@@ -383,8 +394,6 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 if (e is io.github.jan.supabase.exceptions.RestException && e.statusCode in listOf(400, 409, 422)) {
-                    userNegocioId?.let { PendingSales.clear(requireContext(), it) }
-                    pendingPayload = null
                     etDescuento.isEnabled = true
                     listOf(btnEfectivo, btnTransferencia, btnQR, btnFiado, btnSeleccionarCliente).forEach { it.isEnabled = true }
                     btnConfirmarVenta.text = "Confirmar venta"
@@ -395,37 +404,6 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
                 Toast.makeText(requireContext(), "Error al registrar venta: ${e.userMessage()}", Toast.LENGTH_LONG).show()
             }
         }
-    }
-
-    private fun submitPending(payload: JsonObject) {
-        btnConfirmarVenta.isEnabled = false
-        viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                SupabaseModule.client.postgrest.rpc("registrar_venta", payload)
-                PendingSales.clear(requireContext(), requireNotNull(userNegocioId))
-                parentFragmentManager.setFragmentResult("request_venta_exitosa", Bundle().apply { putBoolean("exito", true) })
-                dismiss()
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                if (e is io.github.jan.supabase.exceptions.RestException && e.statusCode in listOf(400, 409, 422)) {
-                    PendingSales.clear(requireContext(), requireNotNull(userNegocioId))
-                    Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
-                    dismiss()
-                } else Toast.makeText(context, "El cobro sigue pendiente. Reintenta al recuperar la conexión.", Toast.LENGTH_LONG).show()
-            } finally { btnConfirmarVenta.isEnabled = true }
-        }
-    }
-
-    private fun showPending(payload: JsonObject) {
-        btnConfirmarVenta.text = "Resolver cobro pendiente"
-        etDescuento.isEnabled = false
-        listOf(btnEfectivo, btnTransferencia, btnQR, btnFiado, btnSeleccionarCliente).forEach { it.isEnabled = false }
-        val payments = payload["p_pagos"] as kotlinx.serialization.json.JsonArray
-        val summary = payments.joinToString(" + ") { payment ->
-            val item = payment as JsonObject
-            "${item.str("metodo")}: $${item.str("monto")}"
-        }
-        tvTotalFinal.text = "Cobro guardado: $summary"
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

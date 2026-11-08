@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA"
+    android:background="@color/bg_app"
     tools:context=".HomeFragment">
 
     <androidx.core.widget.NestedScrollView
@@ -19,11 +19,11 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Selector de fechas amarillo -->
+            <!-- Selector de fechas celeste -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="#FACC15"
+                android:background="@color/sky"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:paddingBottom="16dp"

@@ -21,6 +21,9 @@ import io.github.jan.supabase.postgrest.rpc
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.coroutines.Job
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import java.time.LocalDate
@@ -92,11 +95,6 @@ class HomeFragment : Fragment() {
             (activity as? HomeActivity)?.replaceFragment(ManagementFragment.newInstance("catalogo"))
         }
 
-        val ivSearch = requireActivity().findViewById<View>(R.id.ivSearch)
-        ivSearch?.setOnClickListener {
-            (activity as? HomeActivity)?.replaceFragment(VentaFragment())
-        }
-
         view.findViewById<MaterialCardView>(R.id.cardClients).setOnClickListener {
             (activity as? HomeActivity)?.replaceFragment(ManagementFragment.newInstance("cliente"))
         }
@@ -120,65 +118,88 @@ class HomeFragment : Fragment() {
         }
 
         // Cargar las métricas reales del día desde Supabase
+        parentFragmentManager.setFragmentResultListener(HomeActivity.RESULTADO_CONEXION, viewLifecycleOwner) { _, _ -> cargarMetricasDelDia(fechaSeleccionada) }
         cargarMetricasDelDia(fechaSeleccionada)
     }
 
-    private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
+    private suspend fun getNegocioId(): Long? {
+        val ctx = context ?: return BusinessSession.selectedId
+        return runCatching { BusinessSession.current(ctx)?.negocio_id }.getOrNull()
+            ?: BusinessSession.selectedId
+    }
 
     private fun cargarMetricasDelDia(fechaSeleccionada: LocalDate) {
         metricasJob?.cancel()
+        val ctx = context ?: return
+        val db = DajhoDatabase.getInstance(ctx)
+        val fechaStr = fechaSeleccionada.toString()
+
+        // Carga inmediata síncrona de caché local para evitar parpadeos o valores en blanco
+        val idRapido = BusinessSession.selectedId
+        if (idRapido != null) {
+            val localRapido = db.getResumenDia(idRapido, fechaStr) ?: ResumenDiaDto(0.0, 0.0, 0.0)
+            mostrarResumen(localRapido)
+        }
+
         metricasJob = viewLifecycleOwner.lifecycleScope.launch {
-            try {
-                val negocioId = getNegocioId() ?: return@launch
-                val resumen = SupabaseModule.client.postgrest.rpc("resumen_dia", buildJsonObject {
-                    put("p_negocio", negocioId)
-                    put("p_fecha", fechaSeleccionada.toString())
-                }).decodeAs<ResumenDiaDto>()
-                val totalVentasHoy = resumen.ventas
-                val totalVentasAyer = resumen.ayer
-                val totalGastos = resumen.gastos
-                val balance = totalVentasHoy - totalGastos
+            val negocioId = getNegocioId() ?: return@launch
+            val localResumen = db.getResumenDia(negocioId, fechaStr) ?: ResumenDiaDto(0.0, 0.0, 0.0)
+            mostrarResumen(localResumen)
 
-                // 4. Calcular porcentaje vs ayer
-                val tvVsAyer = view?.findViewById<TextView>(R.id.tvVsAyer)
-                val cardVsAyer = tvVsAyer?.parent as? MaterialCardView
+            if (ctx.hasInternetConnection()) {
+                try {
+                    val resumen = SupabaseModule.client.postgrest.rpc("resumen_dia", buildJsonObject {
+                        put("p_negocio", negocioId)
+                        put("p_fecha", fechaStr)
+                    }).decodeAs<ResumenDiaDto>()
 
-                if (totalVentasAyer > 0.0) {
-                    val diff = totalVentasHoy - totalVentasAyer
-                    val percent = (diff / totalVentasAyer) * 100.0
-                    val absPercent = String.format(Locale.US, "%.1f", abs(percent))
-                    if (percent >= 0) {
-                        tvVsAyer?.text = "vs ayer ↑ $absPercent%"
-                        cardVsAyer?.setCardBackgroundColor(Color.parseColor("#DCFCE7")) // Verde
-                        tvVsAyer?.setTextColor(Color.parseColor("#059669"))
-                    } else {
-                        tvVsAyer?.text = "vs ayer ↓ $absPercent%"
-                        cardVsAyer?.setCardBackgroundColor(Color.parseColor("#FEE2E2")) // Rojo claro
-                        tvVsAyer?.setTextColor(Color.parseColor("#DC2626"))
-                    }
-                } else if (totalVentasHoy > 0.0) {
-                    tvVsAyer?.text = "vs ayer ↑ 100%"
-                    cardVsAyer?.setCardBackgroundColor(Color.parseColor("#DCFCE7"))
-                    tvVsAyer?.setTextColor(Color.parseColor("#059669"))
-                } else {
-                    tvVsAyer?.text = "vs ayer 0.0%"
-                    cardVsAyer?.setCardBackgroundColor(Color.parseColor("#F1F5F9"))
-                    tvVsAyer?.setTextColor(Color.parseColor("#64748B"))
+                    db.saveResumenDia(negocioId, fechaStr, resumen.ventas, resumen.ayer, resumen.gastos)
+                    mostrarResumen(resumen)
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    Log.e("HomeFragment", "Error al cargar métricas de red: " + e.userMessage())
                 }
-
-                // 5. Actualizar tarjetas
-                tvSalesAmount.text = "$${String.format(Locale.US, "%.2f", totalVentasHoy)}"
-                tvExpensesAmount.text = "$${String.format(Locale.US, "%.2f", totalGastos)}"
-                tvBalanceAmount.text = "$${String.format(Locale.US, "%.2f", balance)}"
-
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                Log.e("HomeFragment", "Error al cargar métricas del día" + ": " + e.userMessage())
-                tvSalesAmount.text = "Sin conexión"
-                tvExpensesAmount.text = "Sin conexión"
-                tvBalanceAmount.text = "Sin conexión"
             }
         }
+    }
+
+    private fun mostrarResumen(resumen: ResumenDiaDto) {
+    val totalVentasHoy = resumen.ventas
+    val totalVentasAyer = resumen.ayer
+    val totalGastos = resumen.gastos
+    val balance = totalVentasHoy - totalGastos
+
+    // 4. Calcular porcentaje vs ayer
+    val tvVsAyer = view?.findViewById<TextView>(R.id.tvVsAyer)
+    val cardVsAyer = tvVsAyer?.parent as? MaterialCardView
+
+    if (totalVentasAyer > 0.0) {
+        val diff = totalVentasHoy - totalVentasAyer
+        val percent = (diff / totalVentasAyer) * 100.0
+        val absPercent = String.format(Locale.US, "%.1f", abs(percent))
+        if (percent >= 0) {
+            tvVsAyer?.text = "vs ayer ↑ $absPercent%"
+            cardVsAyer?.setCardBackgroundColor(Color.parseColor("#DCFCE7")) // Verde
+            tvVsAyer?.setTextColor(Color.parseColor("#059669"))
+        } else {
+            tvVsAyer?.text = "vs ayer ↓ $absPercent%"
+            cardVsAyer?.setCardBackgroundColor(Color.parseColor("#FEE2E2")) // Rojo claro
+            tvVsAyer?.setTextColor(Color.parseColor("#DC2626"))
+        }
+    } else if (totalVentasHoy > 0.0) {
+        tvVsAyer?.text = "vs ayer ↑ 100%"
+        cardVsAyer?.setCardBackgroundColor(Color.parseColor("#DCFCE7"))
+        tvVsAyer?.setTextColor(Color.parseColor("#059669"))
+    } else {
+        tvVsAyer?.text = "vs ayer 0.0%"
+        cardVsAyer?.setCardBackgroundColor(Color.parseColor("#F1F5F9"))
+        tvVsAyer?.setTextColor(Color.parseColor("#64748B"))
+    }
+
+    // 5. Actualizar tarjetas
+    tvSalesAmount.text = "$${String.format(Locale.US, "%.2f", totalVentasHoy)}"
+    tvExpensesAmount.text = "$${String.format(Locale.US, "%.2f", totalGastos)}"
+    tvBalanceAmount.text = "$${String.format(Locale.US, "%.2f", balance)}"
     }
 
     private fun generateDynamicDates() {
@@ -216,12 +237,12 @@ class HomeFragment : Fragment() {
         for (i in 0 until layoutFechas.childCount) {
             val pill = layoutFechas.getChildAt(i) as TextView
             if (pill.tag == fechaSeleccionada) {
-                pill.setBackgroundColor(Color.parseColor("#FEF08A"))
+                pill.setBackgroundColor(Color.parseColor("#E0F2FE"))
                 pill.setTextColor(Color.BLACK)
                 pill.setTypeface(null, android.graphics.Typeface.BOLD)
             } else {
                 pill.setBackgroundColor(Color.TRANSPARENT)
-                pill.setTextColor(Color.parseColor("#334155"))
+                pill.setTextColor(Color.WHITE)
                 pill.setTypeface(null, android.graphics.Typeface.NORMAL)
             }
         }

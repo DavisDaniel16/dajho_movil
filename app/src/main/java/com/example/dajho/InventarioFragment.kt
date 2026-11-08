@@ -20,6 +20,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
+import kotlinx.serialization.json.intOrNull
 
 class InventarioFragment : Fragment() {
 
@@ -28,6 +33,7 @@ class InventarioFragment : Fragment() {
     private lateinit var fabAgregarProducto: FloatingActionButton
     private lateinit var inventarioAdapter: InventarioAdapter
 
+    private var inventarioCargado = false
     private var todosLosProductos = listOf<VarianteDto>()
     private var searchJob: Job? = null
     private var cargaInventarioJob: Job? = null
@@ -70,7 +76,7 @@ class InventarioFragment : Fragment() {
 
         // Escuchar cuando un producto sea editado o creado para recargar el inventario
         childFragmentManager.setFragmentResultListener("request_inventario_actualizado", viewLifecycleOwner) { _, _ ->
-            cargarInventario()
+            cargarInventario(forceRefresh = true)
         }
 
         inventarioAdapter = InventarioAdapter { variante ->
@@ -83,6 +89,7 @@ class InventarioFragment : Fragment() {
         rvInventario.layoutManager = LinearLayoutManager(requireContext())
         rvInventario.adapter = inventarioAdapter
 
+        parentFragmentManager.setFragmentResultListener(HomeActivity.RESULTADO_CONEXION, viewLifecycleOwner) { _, _ -> cargarInventario() }
         cargarInventario()
 
         // Filtrado en tiempo real
@@ -97,7 +104,7 @@ class InventarioFragment : Fragment() {
 
     private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
 
-    private fun cargarInventario() {
+    private fun cargarInventario(forceRefresh: Boolean = false) {
         cargaInventarioJob?.cancel()
         cargaInventarioJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
@@ -107,21 +114,18 @@ class InventarioFragment : Fragment() {
                     return@launch
                 }
                 userNegocioId = negocioId
+                val variantes = CatalogRepository.load(negocioId, context = requireContext(), forceRefresh = forceRefresh)
 
-                val variantes = CatalogRepository.load(negocioId, context = requireContext())
-
+                inventarioCargado = true
                 todosLosProductos = variantes
                 aplicarFiltroInventario()
 
-                if (variantes.isEmpty()) {
-                    Toast.makeText(requireContext(), "No tienes productos en el inventario", Toast.LENGTH_SHORT).show()
-                }
+
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("InventarioFragment", "Error al cargar inventario" + ": " + e.userMessage())
-                Toast.makeText(requireContext(), "No se pudo actualizar el inventario", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -140,5 +144,9 @@ class InventarioFragment : Fragment() {
             }
         }
         inventarioAdapter.updateList(visibles)
+        view?.findViewById<android.widget.TextView>(R.id.tvEstadoVacio)?.apply {
+            text = if (query.isEmpty()) "No hay productos en el inventario" else "No se encontraron productos"
+            visibility = if (inventarioCargado && visibles.isEmpty()) View.VISIBLE else View.GONE
+        }
     }
 }

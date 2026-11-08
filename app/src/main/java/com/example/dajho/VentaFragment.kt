@@ -95,13 +95,15 @@ class VentaFragment : Fragment() {
             try {
             userNegocioId = getNegocioId()
             cargarProductosIniciales()
-            userNegocioId?.let { if (PendingSales.get(requireContext(), it) != null) {
-                btnCobrar.text = "RECUPERAR COBRO PENDIENTE"
-            } }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
             }
+        }
+
+        parentFragmentManager.setFragmentResultListener(HomeActivity.RESULTADO_CONEXION, viewLifecycleOwner) { _, _ ->
+            btnCobrar.text = "COBRAR"
+            if (etSearch.text.isNullOrBlank()) cargarProductosIniciales() else searchProductsAfterReconnect()
         }
 
         // Escuchar evento de venta exitosa para vaciar el carrito
@@ -144,14 +146,23 @@ class VentaFragment : Fragment() {
 
         btnCobrar.setOnClickListener {
             val total = calcularTotal()
-            val pending = userNegocioId?.let { PendingSales.get(requireContext(), it) }
-            if (pending != null) {
-                CobroBottomSheet(0.0, emptyList()).show(parentFragmentManager, "CobroBottomSheet")
-            } else if (listaCarrito.isEmpty()) {
+            if (listaCarrito.isEmpty()) {
                 Toast.makeText(requireContext(), "El carrito está vacío", Toast.LENGTH_SHORT).show()
             } else {
-                val cobroBottomSheet = CobroBottomSheet(total, listaCarrito.toList())
-                cobroBottomSheet.show(parentFragmentManager, "CobroBottomSheet")
+                val negocioId = userNegocioId
+                if (negocioId != null && !DajhoDatabase.getInstance(requireContext()).isCajaAbierta(negocioId)) {
+                    com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Caja Cerrada")
+                        .setMessage("Debes abrir la caja desde el módulo de Gestión para poder registrar ventas.")
+                        .setPositiveButton("Ir a Gestión") { _, _ ->
+                            (activity as? HomeActivity)?.replaceFragment(ManagementFragment.newInstance("caja"))
+                        }
+                        .setNegativeButton("Cancelar", null)
+                        .show()
+                } else {
+                    val cobroBottomSheet = CobroBottomSheet(total, listaCarrito.toList())
+                    cobroBottomSheet.show(parentFragmentManager, "CobroBottomSheet")
+                }
             }
         }
 
@@ -163,6 +174,11 @@ class VentaFragment : Fragment() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putString("carrito", ScreenArgs.json.encodeToString(listaCarrito.toList()))
         super.onSaveInstanceState(outState)
+    }
+
+    private fun searchProductsAfterReconnect() {
+        searchJob?.cancel()
+        searchJob = viewLifecycleOwner.lifecycleScope.launch { searchProducts(etSearch.text.toString().trim()) }
     }
 
     private fun cargarProductosIniciales() {

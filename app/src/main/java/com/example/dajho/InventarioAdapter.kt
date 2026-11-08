@@ -1,4 +1,4 @@
-package com.example.dajho
+﻿package com.example.dajho
 
 import android.graphics.Color
 import android.view.LayoutInflater
@@ -12,6 +12,7 @@ class InventarioAdapter(
     private var listaVariantes: List<VarianteDto> = emptyList(),
     private val onItemClick: (VarianteDto) -> Unit = {}
 ) : RecyclerView.Adapter<InventarioAdapter.InventarioViewHolder>() {
+
 
     class InventarioViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val tvProductoNombre: TextView = view.findViewById(R.id.tvProductoNombre)
@@ -54,14 +55,14 @@ class InventarioAdapter(
             "Talla: ${item.talla?.takeIf { it.isNotBlank() } ?: "Sin talla"} | " +
                 "Color: ${item.color?.takeIf { it.isNotBlank() } ?: "Sin color"}"
         val skuText = "SKU: ${item.sku ?: "Sin SKU"}"
-        val barcodeText = if (!item.codigo_barras.isNullOrBlank()) "  ·  CB: ${item.codigo_barras}" else ""
+        val barcodeText = if (!item.codigo_barras.isNullOrBlank()) "  Â·  CB: ${item.codigo_barras}" else ""
         holder.tvSku.text = "$skuText$barcodeText"
 
         val stock = item.stock_actual ?: 0
         val stockMinimo = item.stock_minimo ?: 5
         holder.tvStock.text = "Stock: $stock"
 
-        // Alerta de stock bajo (rojo si es menor o igual al stock mínimo configurado)
+        // Alerta de stock bajo (rojo si es menor o igual al stock mÃ­nimo configurado)
         if (stock <= stockMinimo) {
             holder.tvStock.setTextColor(Color.parseColor("#EF4444")) // Rojo
         } else {
@@ -80,3 +81,4 @@ class InventarioAdapter(
         notifyDataSetChanged()
     }
 }
+

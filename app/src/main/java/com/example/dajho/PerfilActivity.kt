@@ -111,6 +111,22 @@ class PerfilActivity : AppCompatActivity() {
             openLegal(BuildConfig.PRIVACY_URL)
         }
 
+        val switchModoOscuro = findViewById<com.google.android.material.switchmaterial.SwitchMaterial>(R.id.switchModoOscuro)
+        val prefs = getSharedPreferences("app_prefs", MODE_PRIVATE)
+        val systemIsDark = resources.configuration.uiMode and
+            android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val isDark = prefs.getBoolean("dark_mode", systemIsDark)
+        switchModoOscuro?.isChecked = isDark
+
+        switchModoOscuro?.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("dark_mode", isChecked).apply()
+            androidx.appcompat.app.AppCompatDelegate.setDefaultNightMode(
+                if (isChecked) androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_YES
+                else androidx.appcompat.app.AppCompatDelegate.MODE_NIGHT_NO
+            )
+        }
+
         btnCerrarSesion.setOnClickListener {
             cerrarSesion()
         }

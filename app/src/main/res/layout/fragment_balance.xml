@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA"
+    android:background="@color/bg_app"
     tools:context=".BalanceFragment">
 
     <!-- Tarjeta de Resumen Financiero -->
@@ -44,6 +44,16 @@
                 android:textColor="@android:color/black"
                 android:textSize="28sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvResumenPendientes"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="Los totales no incluyen operaciones pendientes de sincronizaci?n."
+                android:textColor="#64748B"
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <View
                 android:layout_width="match_parent"
@@ -152,7 +162,7 @@
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:indeterminateTint="#FACC15"
+        android:indeterminateTint="@color/sky"
         android:visibility="gone"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"

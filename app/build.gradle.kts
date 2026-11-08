@@ -3,7 +3,6 @@ import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
 
@@ -76,14 +75,8 @@ dependencies {
     // Serialization
     implementation(libs.kotlinx.serialization.json)
 
-    // DataStore y Corrutinas
-    implementation(libs.androidx.datastore.preferences)
+    // Corrutinas
     implementation(libs.kotlinx.coroutines.android)
-
-    // Room Database
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
 
     // Supabase y Ktor
     implementation(libs.supabase.postgrest)

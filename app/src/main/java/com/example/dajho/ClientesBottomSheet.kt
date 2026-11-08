@@ -37,6 +37,7 @@ class ClientesBottomSheet() : BottomSheetDialogFragment() {
     private lateinit var rvClientes: RecyclerView
     private lateinit var clienteAdapter: ClienteAdapter
 
+    private var clientesCargados = false
     private var todosLosClientes = listOf<ClienteDto>()
     private var searchJob: Job? = null
 
@@ -76,16 +77,20 @@ class ClientesBottomSheet() : BottomSheetDialogFragment() {
             searchJob?.cancel()
             searchJob = viewLifecycleOwner.lifecycleScope.launch {
                 delay(200)
-                if (query.isEmpty()) {
-                    clienteAdapter.updateList(todosLosClientes)
-                } else {
-                    val filtrados = todosLosClientes.filter {
-                        (it.nombre ?: "").contains(query, ignoreCase = true) ||
-                        (it.telefono ?: "").contains(query, ignoreCase = true)
-                    }
-                    clienteAdapter.updateList(filtrados)
-                }
+                aplicarFiltro(query)
             }
+        }
+    }
+
+    private fun aplicarFiltro(query: String) {
+        val visibles = todosLosClientes.filter {
+            it.nombre.orEmpty().contains(query, ignoreCase = true) ||
+                it.telefono.orEmpty().contains(query, ignoreCase = true)
+        }
+        clienteAdapter.updateList(visibles)
+        view?.findViewById<android.widget.TextView>(R.id.tvEstadoVacio)?.apply {
+            text = if (query.isEmpty()) "No hay clientes registrados" else "No se encontraron clientes"
+            visibility = if (clientesCargados && visibles.isEmpty()) View.VISIBLE else View.GONE
         }
     }
 
@@ -94,16 +99,12 @@ class ClientesBottomSheet() : BottomSheetDialogFragment() {
             try {
                 val clientes = CustomerRepository.clients(negocioId, context = requireContext())
 
+                clientesCargados = true
                 todosLosClientes = clientes
-                clienteAdapter.updateList(clientes)
-
-                if (clientes.isEmpty()) {
-                    Toast.makeText(requireContext(), "No tienes clientes registrados", Toast.LENGTH_SHORT).show()
-                }
+                aplicarFiltro(etSearch.text.toString().trim())
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("ClientesBottomSheet", "Error al cargar clientes" + ": " + e.userMessage())
-                Toast.makeText(requireContext(), "Error al cargar clientes: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
             }
         }
     }

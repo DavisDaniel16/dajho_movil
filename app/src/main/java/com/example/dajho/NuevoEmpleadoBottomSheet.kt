@@ -93,7 +93,13 @@ class NuevoEmpleadoBottomSheet() : BottomSheetDialogFragment() {
                     put("p_password", password)
                     put("p_tope_descuento_usd", tope)
                 }
-                EmployeeService.create(params)
+                if (requireContext().hasInternetConnection()) {
+                    EmployeeService.create(params)
+                } else {
+                    SyncManager.enqueueAndTrySync(requireContext(), negocioId, "crear_empleado", params)
+                }
+
+                Toast.makeText(requireContext(), "Empleado registrado con éxito", Toast.LENGTH_SHORT).show()
 
                 parentFragmentManager.setFragmentResult(
                     REQUEST_EMPLEADOS_ACTUALIZADOS,

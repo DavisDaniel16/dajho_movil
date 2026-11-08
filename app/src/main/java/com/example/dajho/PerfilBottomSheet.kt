@@ -130,11 +130,13 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                SupabaseModule.client.postgrest.rpc("actualizar_perfil", buildJsonObject {
+                val payload = buildJsonObject {
                     put("p_nombre", nuevoNombreUsuario)
                     put("p_negocio", userNegocioId)
                     put("p_nombre_negocio", nuevoNombreNegocio)
-                })
+                }
+
+                SyncManager.enqueueAndTrySync(requireContext(), userNegocioId ?: 0L, "actualizar_perfil", payload)
 
                 Toast.makeText(requireContext(), "¡Perfil actualizado con éxito!", Toast.LENGTH_SHORT).show()
 

@@ -52,8 +52,8 @@ class ManagementFragment : Fragment() {
         "compra" to Pair(R.drawable.ic_cart, "#FFEDD5"),
         "ventas" to Pair(R.drawable.ic_sale, "#DCFCE7"),
         "movimiento_inventario" to Pair(R.drawable.ic_inventory, "#E0E7FF"),
-        "planes" to Pair(R.drawable.ic_shopping_bag, "#FEF08A"),
-        "acceso_soporte" to Pair(R.drawable.ic_privacy, "#FEF08A"),
+        "planes" to Pair(R.drawable.ic_shopping_bag, "#E0F2FE"),
+        "acceso_soporte" to Pair(R.drawable.ic_privacy, "#E0F2FE"),
         "catalogo" to Pair(R.drawable.ic_catalog, "#F3E8FF")
     )
 
@@ -69,11 +69,14 @@ class ManagementFragment : Fragment() {
         }
     }
 
-    override fun onViewCreated(view: View, state: Bundle?) { load() }
+    override fun onViewCreated(view: View, state: Bundle?) {
+        parentFragmentManager.setFragmentResultListener(HomeActivity.RESULTADO_CONEXION, viewLifecycleOwner) { _, _ -> load() }
+        load()
+    }
 
     private val Int.dp: Int get() = (this * resources.displayMetrics.density).toInt()
 
-    private fun load(more: Boolean = false) {
+    private fun load(more: Boolean = false, refresh: Boolean = false) {
         if (loading) return
         loading = true
         viewLifecycleOwner.lifecycleScope.launch {
@@ -83,14 +86,14 @@ class ManagementFragment : Fragment() {
                     val variants = CatalogRepository.load(business, context = requireContext())
                     content.removeAllViews()
                     renderHeaderCard("Catálogo Virtual", "Muestra tus productos y comparte con tus clientes") {
-                        val lines = variants.map { "${it.producto?.nombre} · ${it.talla.orEmpty()} ${it.color.orEmpty()} · $${it.precio_venta}" }
-                        addHeaderButton("Compartir catálogo", R.drawable.ic_catalog, isPrimary = true) {
-                            startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"; putExtra(Intent.EXTRA_TEXT, lines.joinToString("\n"))
-                            }, "Compartir catálogo"))
+                        addHeaderButton("Exportar catálogo (.xlsx)", R.drawable.ic_catalog, isPrimary = true) {
+                            val businessName = (activity as? HomeActivity)?.findViewById<TextView>(R.id.tvBusinessName)?.text?.toString()?.replace(" ▾", "")?.trim() ?: "DAJHO"
+                            val excelFile = ExcelReportExporter.generateCatalogReportXlsx(requireContext(), businessName, variants)
+                            ExcelReportExporter.shareXlsxReport(requireContext(), excelFile, "Catálogo $businessName")
                         }
                         addHeaderButton("Imprimir catálogo", R.drawable.ic_printer) {
-                            ReceiptPrinter.print(requireActivity(), "Catálogo", lines)
+                            val lines = variants.map { "${it.producto?.nombre} · ${it.talla.orEmpty()} ${it.color.orEmpty()} · $${it.precio_venta}" }
+                            ReceiptPrinter.print(requireActivity(), "Catálogo", lines.joinToString("\n"))
                         }
                     }
                     if (variants.isEmpty()) {
@@ -115,7 +118,6 @@ class ManagementFragment : Fragment() {
                     addHeaderButton("Inicio", R.drawable.ic_home) {
                         (activity as? HomeActivity)?.replaceFragment(HomeFragment())
                     }
-                    addHeaderButton("Actualizar", R.drawable.ic_search) { load() }
 
                     if (module in listOf("cliente", "proveedor", "categoria", "temporada") && (module == "cliente" || owner())) {
                         addHeaderButton("Agregar ${titles[module]?.lowercase()}", R.drawable.ic_plus, isPrimary = true) {
@@ -131,18 +133,6 @@ class ManagementFragment : Fragment() {
                             addHeaderButton("Abrir caja", R.drawable.ic_balance, isPrimary = true) { cashForm(false) }
                         } else {
                             addHeaderButton("Cerrar caja #${open.str("id")}", R.drawable.ic_check, isPrimary = true) { cashForm(true) }
-                        }
-                    }
-                }
-
-                // Banner de recuperaciones pendientes si existen
-                listOf("gasto", "abono", "compra").forEach { type ->
-                    BusinessOperations.pending(requireContext(), business, type)?.let { pending ->
-                        val data = pending["p_datos"]!!.jsonObject
-                        renderPendingCard(type, data.str("monto").ifEmpty { "operación guardada" }) {
-                            showForm("Resolver $type pendiente: ${data.str("monto").ifEmpty { "compra guardada" }}", emptyList(), { load() }) {
-                                BusinessOperations.execute(requireContext(), business, type, data)
-                            }
                         }
                     }
                 }
@@ -163,22 +153,80 @@ class ManagementFragment : Fragment() {
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 content.removeAllViews()
-                renderHeaderCard(titles[module] ?: module, "Error al cargar la información") {}
-                renderEmptyState("Error de carga", e.userMessage())
-                content.addView(MaterialButton(requireContext()).apply {
-                    text = "REINTENTAR"
-                    backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#1E293B"))
-                    setOnClickListener { load() }
-                })
+                val moduleTitle = titles[module] ?: module
+                renderHeaderCard(moduleTitle, "Gestión y administración del módulo") {
+                    addHeaderButton("Inicio", R.drawable.ic_home) {
+                        (activity as? HomeActivity)?.replaceFragment(HomeFragment())
+                    }
+                }
+                if (rows.isEmpty()) {
+                    renderEmptyState("No hay registros", "Los datos de $moduleTitle aparecerán aquí al ser registrados.")
+                } else {
+                    rows.forEach { row -> renderRow(row) }
+                }
             } finally { loading = false }
         }
     }
 
     private fun owner() = (activity as? HomeActivity)?.esPropietario() == true
 
-    private suspend fun rpc(name: String, data: JsonObject) = SupabaseModule.client.postgrest.rpc(name, buildJsonObject {
-        put("p_negocio", business); data.forEach { (key, value) -> put(key, value) }
-    })
+    private suspend fun rpc(name: String, data: JsonObject): io.github.jan.supabase.postgrest.result.PostgrestResult {
+        val db = DajhoDatabase.getInstance(requireContext())
+        val params = buildJsonObject {
+            put("p_negocio", business)
+            data.forEach { (key, value) -> put(key, value) }
+        }
+
+        if (name == "listar_gestion") {
+            val modulo = data["p_modulo"]?.jsonPrimitive?.content ?: ""
+            if (requireContext().hasInternetConnection()) {
+                try {
+                    val res = SupabaseModule.client.postgrest.rpc(name, params)
+                    db.saveGestionItems(business, modulo, res.data)
+                    return res
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    val localStr = db.getGestionItems(business, modulo)
+                    if (localStr != null) {
+                        return io.github.jan.supabase.postgrest.result.PostgrestResult(
+                            data = localStr,
+                            headers = io.ktor.http.Headers.Empty,
+                            postgrest = SupabaseModule.client.postgrest
+                        )
+                    }
+                    throw e
+                }
+            } else {
+                val localStr = db.getGestionItems(business, modulo) ?: "[]"
+                return io.github.jan.supabase.postgrest.result.PostgrestResult(
+                    data = localStr,
+                    headers = io.ktor.http.Headers.Empty,
+                    postgrest = SupabaseModule.client.postgrest
+                )
+            }
+        } else {
+            if (requireContext().hasInternetConnection()) {
+                try {
+                    return SupabaseModule.client.postgrest.rpc(name, params)
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    SyncManager.enqueueAndTrySync(requireContext(), business, name, params)
+                    return io.github.jan.supabase.postgrest.result.PostgrestResult(
+                        data = "{\"success\":true}",
+                        headers = io.ktor.http.Headers.Empty,
+                        postgrest = SupabaseModule.client.postgrest
+                    )
+                }
+            } else {
+                SyncManager.enqueueAndTrySync(requireContext(), business, name, params)
+                return io.github.jan.supabase.postgrest.result.PostgrestResult(
+                    data = "{\"success\":true}",
+                    headers = io.ktor.http.Headers.Empty,
+                    postgrest = SupabaseModule.client.postgrest
+                )
+            }
+        }
+    }
 
     // --- RENDERIZADO DE CABECERA Y TARJETAS ---
 
@@ -205,7 +253,7 @@ class ManagementFragment : Fragment() {
             gravity = Gravity.CENTER_VERTICAL
         }
 
-        val iconData = moduleIcons[module] ?: Pair(R.drawable.ic_settings, "#FEF08A")
+        val iconData = moduleIcons[module] ?: Pair(R.drawable.ic_settings, "#E0F2FE")
         val iconContainer = MaterialCardView(requireContext()).apply {
             radius = 22.dp.toFloat()
             cardElevation = 0f
@@ -293,45 +341,6 @@ class ManagementFragment : Fragment() {
             btn.setOnClickListener { action() }
             container.addView(btn)
         }
-    }
-
-    private fun renderPendingCard(type: String, amountStr: String, onResolve: () -> Unit) {
-        val card = MaterialCardView(requireContext()).apply {
-            radius = 12.dp.toFloat()
-            cardElevation = 1.dp.toFloat()
-            setCardBackgroundColor(Color.parseColor("#FEF3C7"))
-            strokeWidth = 1.dp
-            strokeColor = Color.parseColor("#F59E0B")
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = 12.dp }
-        }
-
-        val layout = LinearLayout(requireContext()).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(14.dp, 12.dp, 14.dp, 12.dp)
-            addView(TextView(requireContext()).apply {
-                text = "⚠️ Operación pendiente: $type ($amountStr)"
-                textSize = 14f
-                setTypeface(null, android.graphics.Typeface.BOLD)
-                setTextColor(Color.parseColor("#92400E"))
-            })
-            addView(MaterialButton(requireContext()).apply {
-                text = "RESOLVER PENDIENTE"
-                textSize = 12f
-                backgroundTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#D97706"))
-                setTextColor(Color.WHITE)
-                cornerRadius = 8.dp
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply { topMargin = 6.dp }
-                setOnClickListener { onResolve() }
-            })
-        }
-        card.addView(layout)
-        content.addView(card)
     }
 
     private fun renderEmptyState(title: String, subtitle: String) {
@@ -529,7 +538,7 @@ class ManagementFragment : Fragment() {
                     ).apply { topMargin = 4.dp }
                 })
 
-                val details = "Inicial: $${row.str("monto_inicial")}  ·  Esperado: $${row.str("monto_esperado")}\nDeclarado: $${row.str("monto_declarado")}"
+                val details = cashRegisterSummary(row)
                 layout.addView(TextView(requireContext()).apply {
                     text = details
                     textSize = 13f
@@ -750,7 +759,7 @@ class ManagementFragment : Fragment() {
 
                 val badge = when (estado) {
                     "autorizado" -> createBadge(estado, "#DBEAFE", "#1D4ED8")
-                    "solicitado" -> createBadge(estado, "#FEF3C7", "#B45309")
+                    "solicitado" -> createBadge(estado, "#E0F2FE", "#00236F")
                     else -> createBadge(estado, "#F1F5F9", "#475569")
                 }
                 topRow.addView(badge)
@@ -998,7 +1007,7 @@ class ManagementFragment : Fragment() {
                 val badge = if (estado == "completado" || estado == "aprobado") {
                     createBadge(estado, "#DCFCE7", "#15803D")
                 } else {
-                    createBadge(estado, "#FEF3C7", "#B45309")
+                    createBadge(estado, "#E0F2FE", "#00236F")
                 }
                 topRow.addView(badge)
                 layout.addView(topRow)
@@ -1084,6 +1093,7 @@ class ManagementFragment : Fragment() {
     private fun cashForm(close: Boolean) {
         showForm(if (close) "Cerrar caja" else "Abrir caja", listOf(FormField(if (close) "Efectivo contado" else "Efectivo inicial", numeric = true)), { load() }) {
             val amount = Money.amount(it[0]); require(amount.signum() >= 0) { "El monto no puede ser negativo" }
+            DajhoDatabase.getInstance(requireContext()).setCajaEstado(business, !close)
             rpc(if (close) "cerrar_caja" else "abrir_caja", buildJsonObject {
                 put(if (close) "p_monto_declarado" else "p_monto_inicial", Money.json(amount))
             })
@@ -1125,10 +1135,11 @@ class ManagementFragment : Fragment() {
         MaterialAlertDialogBuilder(requireContext()).setTitle("Compra a ${provider.str("nombre")}").setMessage(summary)
             .setNegativeButton("Agregar producto") { _, _ -> choosePurchaseItem(provider, variants, items) }
             .setPositiveButton("Confirmar compra") { _, _ ->
+                val requestId = java.util.UUID.randomUUID().toString()
                 showForm("Registrar compra revisada", emptyList(), { load() }) {
                     BusinessOperations.execute(requireContext(), business, "compra", buildJsonObject {
                         put("proveedor", provider["id"]!!); put("items", JsonArray(items))
-                    })
+                    }, requestId)
                 }
             }.show()
     }

@@ -45,6 +45,7 @@ class GastoBottomSheet() : BottomSheetDialogFragment() {
     private val negocioId: Long get() = ScreenArgs.json.decodeFromString(requireArguments().getString("negocioId")!!)
 
 
+    private val requestId = java.util.UUID.randomUUID().toString()
     private lateinit var etCategoria: TextInputEditText
     private lateinit var etMonto: TextInputEditText
     private lateinit var etDescripcion: TextInputEditText
@@ -106,11 +107,11 @@ class GastoBottomSheet() : BottomSheetDialogFragment() {
                     fecha = LocalDate.now().toString()
                 )
 
-                BusinessOperations.execute(requireContext(), negocioId, "gasto", buildJsonObject {
+                BusinessOperations.saveExpense(requireContext(), negocioId, buildJsonObject {
                     put("categoria", categoria)
                     put("monto", Money.json(Money.amount(montoStr)))
                     put("descripcion", descripcion.takeIf { it.isNotBlank() })
-                })
+                }, requestId)
 
                 Toast.makeText(requireContext(), "¡Gasto registrado con éxito!", Toast.LENGTH_SHORT).show()
 

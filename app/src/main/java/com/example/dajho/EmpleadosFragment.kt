@@ -20,6 +20,9 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -45,6 +48,7 @@ class EmpleadosFragment : Fragment() {
 
         progressBar = view.findViewById(R.id.progressEmpleados)
         adapter = EmpleadosAdapter { empleado ->
+            if (empleado.usuario_id == null) return@EmpleadosAdapter
             showForm("Editar ${empleado.nombre}", listOf(
                 FormField("Activo (sí/no)", if (empleado.activo == true) "sí" else "no"),
                 FormField("Tope de descuento USD", empleado.tope_descuento_usd?.toString() ?: "0", true)
@@ -85,7 +89,15 @@ class EmpleadosFragment : Fragment() {
                     .show(childFragmentManager, "NuevoEmpleadoBottomSheet")
             }
 
+        parentFragmentManager.setFragmentResultListener(HomeActivity.RESULTADO_CONEXION, viewLifecycleOwner) { _, _ -> cargarEmpleados() }
         cargarEmpleados()
+    }
+
+    private fun mostrarEmpleados(empleados: List<EmpleadoDto>) {
+        val pendientes = emptyList<EmpleadoDto>()
+        adapter.updateList(pendientes + empleados)
+        view?.findViewById<View>(R.id.tvEstadoVacio)?.visibility =
+            if (empleados.isEmpty() && pendientes.isEmpty()) View.VISIBLE else View.GONE
     }
 
     private fun cargarEmpleados() {
@@ -110,12 +122,30 @@ class EmpleadosFragment : Fragment() {
                 }
 
                 negocioIdActual = negocioId
-                val empleados = SupabaseModule.client.postgrest.rpc(
-                    "obtener_empleados",
-                    buildJsonObject { put("p_negocio_id", negocioId) }
-                ).decodeList<EmpleadoDto>()
+                val db = DajhoDatabase.getInstance(requireContext())
+                val empleados = if (requireContext().hasInternetConnection()) {
+                    try {
+                        val list = SupabaseModule.client.postgrest.rpc(
+                            "obtener_empleados",
+                            buildJsonObject { put("p_negocio_id", negocioId) }
+                        ).decodeList<EmpleadoDto>()
+                        db.saveGestionItems(negocioId, "empleado", ScreenArgs.json.encodeToString(list))
+                        list
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        val localStr = db.getGestionItems(negocioId, "empleado")
+                        if (localStr != null) {
+                            ScreenArgs.json.decodeFromString<List<EmpleadoDto>>(localStr)
+                        } else emptyList()
+                    }
+                } else {
+                    val localStr = db.getGestionItems(negocioId, "empleado")
+                    if (localStr != null) {
+                        ScreenArgs.json.decodeFromString<List<EmpleadoDto>>(localStr)
+                    } else emptyList()
+                }
 
-                adapter.updateList(empleados)
+                mostrarEmpleados(empleados)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("EmpleadosFragment", "Error al cargar empleados" + ": " + e.userMessage())

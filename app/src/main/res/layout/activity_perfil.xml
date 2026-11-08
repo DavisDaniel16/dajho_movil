@@ -5,18 +5,19 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA"
+    android:background="@color/bg_app"
     tools:context=".PerfilActivity">
 
     <!-- Barra superior -->
-    <androidx.appcompat.widget.Toolbar
+    <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        android:background="#FACC15"
+        android:background="@color/sky"
         app:title="Configuración"
-        app:titleTextColor="@android:color/black"
+        app:titleTextColor="@color/white"
         app:navigationIcon="@drawable/ic_arrow_back"
+        app:navigationIconTint="@color/white"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -56,7 +57,7 @@
                     <com.google.android.material.card.MaterialCardView
                         android:layout_width="56dp"
                         android:layout_height="56dp"
-                        app:cardBackgroundColor="#FEF08A"
+                        app:cardBackgroundColor="@color/sky_light"
                         app:cardCornerRadius="28dp"
                         app:cardElevation="0dp"
                         app:strokeWidth="0dp">
@@ -159,9 +160,9 @@
                         android:id="@+id/btnComprarPlan"
                         android:layout_width="wrap_content"
                         android:layout_height="40dp"
-                        android:backgroundTint="#FACC15"
+                        android:backgroundTint="@color/sky"
                         android:text="Mejorar"
-                        android:textColor="#1E293B"
+                        android:textColor="@color/white"
                         android:textSize="13sp"
                         android:textStyle="bold"
                         app:cornerRadius="10dp" />
@@ -306,6 +307,47 @@
                             android:text="›"
                             android:textColor="#94A3B8"
                             android:textSize="20sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginStart="56dp"
+                        android:background="#F1F5F9" />
+
+                    <!-- 4. Modo Oscuro -->
+                    <LinearLayout
+                        android:id="@+id/menuModoOscuro"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp"
+                        android:paddingVertical="14dp">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:src="@drawable/ic_moon"
+                            android:contentDescription="Modo Oscuro"
+                            app:tint="#1E293B" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:text="Modo Oscuro"
+                            android:textColor="@android:color/black"
+                            android:textSize="15sp" />
+
+                        <com.google.android.material.switchmaterial.SwitchMaterial
+                            android:id="@+id/switchModoOscuro"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
                     </LinearLayout>
 
                 </LinearLayout>

@@ -50,7 +50,14 @@ class ProductoAdapter(
         holder.tvPrecio.text = "$${String.format(Locale.US, "%.2f", item.precio_venta ?: 0.0)}"
 
         holder.tvVarianteInfo.text = "Talla: ${talla.ifEmpty { "-" }} | Color: ${color.ifEmpty { "-" }}"
-        holder.tvStock.text = "Stock: ${item.stock_actual ?: 0}"
+        val stock = item.stock_actual ?: 0
+        val stockMinimo = item.stock_minimo ?: 5
+        holder.tvStock.text = "Stock: $stock"
+        if (stock <= stockMinimo) {
+            holder.tvStock.setTextColor(android.graphics.Color.parseColor("#EF4444")) // Rojo (Alerta stock bajo)
+        } else {
+            holder.tvStock.setTextColor(android.graphics.Color.parseColor("#10B981")) // Verde
+        }
         holder.tvSku.text = "SKU: ${item.sku ?: "Sin SKU"}"
 
         holder.itemView.setOnClickListener {

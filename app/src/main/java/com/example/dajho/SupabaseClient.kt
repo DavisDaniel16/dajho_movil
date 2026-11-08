@@ -3,6 +3,7 @@ package com.example.dajho
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.gotrue.Auth
+import io.github.jan.supabase.gotrue.SettingsSessionManager
 import io.github.jan.supabase.postgrest.Postgrest
 
 object SupabaseModule {
@@ -12,6 +13,7 @@ object SupabaseModule {
             supabaseKey = BuildConfig.SUPABASE_ANON_KEY
         ) {
             install(Auth) {
+                sessionManager = SettingsSessionManager()
                 scheme = "dajho"
                 host = "confirm"
             }

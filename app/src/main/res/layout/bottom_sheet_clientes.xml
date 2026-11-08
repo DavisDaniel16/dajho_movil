@@ -48,6 +48,17 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <TextView
+            android:id="@+id/tvEstadoVacio"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:gravity="center"
+            android:text="No hay clientes registrados"
+            android:textColor="#64748B"
+            android:textSize="16sp"
+            android:visibility="gone" />
+
         <!-- Lista de clientes -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvClientes"

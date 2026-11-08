@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FFFFFFFF</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="sky">#0284C7</color>
+    <color name="sky_light">#1E293B</color>
+    <color name="sky_dark">#020617</color>
+
+    <!-- Theme-adaptive colors for Dark Mode -->
+    <color name="bg_app">#0F172A</color>
+    <color name="card_bg">#1E293B</color>
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#94A3B8</color>
+    <color name="divider_color">#334155</color>
+    <color name="bottom_nav_bg">#1E293B</color>
+</resources>
