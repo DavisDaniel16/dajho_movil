@@ -52,7 +52,7 @@ fun Fragment.editProduct(productId: Long, saved: () -> Unit) {
                 }.show()
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) throw e
-            android.widget.Toast.makeText(context, e.userMessage(), android.widget.Toast.LENGTH_LONG).show()
+            AppFeedback.makeText(context, e.userMessage("editar el producto"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
         }
     }
 }

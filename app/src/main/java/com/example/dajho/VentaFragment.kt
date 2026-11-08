@@ -6,7 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -71,7 +70,7 @@ class VentaFragment : Fragment() {
                 if (nuevaCantidad > item.cantidad &&
                     (stockDisponible == null || nuevaCantidad > stockDisponible)
                 ) {
-                    Toast.makeText(requireContext(), "Límite de stock alcanzado", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "Límite de stock alcanzado", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 } else {
                     item.cantidad = nuevaCantidad
                     carritoAdapter.updateList(listaCarrito.toList())
@@ -97,7 +96,7 @@ class VentaFragment : Fragment() {
             cargarProductosIniciales()
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(context, e.userMessage("buscar los productos"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
 
@@ -147,7 +146,7 @@ class VentaFragment : Fragment() {
         btnCobrar.setOnClickListener {
             val total = calcularTotal()
             if (listaCarrito.isEmpty()) {
-                Toast.makeText(requireContext(), "El carrito está vacío", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), "El carrito está vacío", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             } else {
                 val negocioId = userNegocioId
                 if (negocioId != null && !DajhoDatabase.getInstance(requireContext()).isCajaAbierta(negocioId)) {
@@ -199,14 +198,14 @@ class VentaFragment : Fragment() {
     private fun agregarAlCarrito(variante: VarianteDto) {
         val stockDisponible = variante.stock_actual
         if (stockDisponible == null || stockDisponible <= 0) {
-            Toast.makeText(requireContext(), "No hay stock disponible de este producto", Toast.LENGTH_SHORT).show()
+            AppFeedback.makeText(requireContext(), "No hay stock disponible de este producto", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             return
         }
 
         val existente = listaCarrito.find { it.variante.id == variante.id }
         val cantidadEnCarrito = existente?.cantidad ?: 0
         if (cantidadEnCarrito >= stockDisponible) {
-            Toast.makeText(requireContext(), "No puedes agregar más unidades. Límite de stock alcanzado", Toast.LENGTH_SHORT).show()
+            AppFeedback.makeText(requireContext(), "No puedes agregar más unidades. Límite de stock alcanzado", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             return
         }
 
@@ -220,7 +219,7 @@ class VentaFragment : Fragment() {
         carritoAdapter.updateList(listaCarrito.toList())
         actualizarTotal()
         actualizarBotonCarrito()
-        Toast.makeText(requireContext(), "Producto agregado al carrito", Toast.LENGTH_SHORT).show()
+        AppFeedback.makeText(requireContext(), "Producto agregado al carrito", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.SUCCESS).show()
     }
 
     private fun limpiarCarrito() {
@@ -260,7 +259,7 @@ class VentaFragment : Fragment() {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
-                    Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "No se pudo identificar tu negocio. Vuelve a Inicio y comprueba tu acceso.", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                     return@coroutineScope
                 }
 
@@ -270,7 +269,7 @@ class VentaFragment : Fragment() {
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("VentaFragment", "Error buscando productos" + ": " + e.userMessage())
-                Toast.makeText(requireContext(), "Error al buscar: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("buscar los productos"), AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             }
         }
     }

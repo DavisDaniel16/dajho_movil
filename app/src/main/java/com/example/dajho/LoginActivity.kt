@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -53,8 +52,8 @@ class LoginActivity : AppCompatActivity() {
             } else lifecycleScope.launch {
                 try {
                     SupabaseModule.client.auth.resetPasswordForEmail(email, "dajho://confirm")
-                    Toast.makeText(this@LoginActivity, "Si el correo está registrado recibirás un enlace de recuperación", Toast.LENGTH_LONG).show()
-                } catch (e: Exception) { Toast.makeText(this@LoginActivity, e.userMessage(), Toast.LENGTH_LONG).show() }
+                    AppFeedback.makeText(this@LoginActivity, "Si el correo está registrado recibirás un enlace de recuperación", AppFeedback.LENGTH_LONG, AppFeedback.Kind.SUCCESS).show()
+                } catch (e: Exception) { AppFeedback.makeText(this@LoginActivity, e.userMessage("solicitar el enlace de acceso"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show() }
             }
         }
         handleAuthLink(intent)
@@ -76,17 +75,17 @@ class LoginActivity : AppCompatActivity() {
                                 type = OtpType.Email.EMAIL,
                                 tokenHash = tokenHash
                             )
-                            Toast.makeText(
+                            AppFeedback.makeText(
                                 this@LoginActivity,
                                 "Correo confirmado. Ahora puedes iniciar sesión",
-                                Toast.LENGTH_LONG
+                                AppFeedback.LENGTH_LONG, AppFeedback.Kind.SUCCESS
                             ).show()
                             intent.data = null // Limpiar el intent para evitar re-verificaciones
                         } catch (e: Exception) {
-                            Toast.makeText(
+                            AppFeedback.makeText(
                                 this@LoginActivity,
-                                "Error al confirmar correo: ${e.userMessage()}",
-                                Toast.LENGTH_LONG
+                                e.userMessage("confirmar el correo"),
+                                AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR
                             ).show()
                         }
                     }
@@ -99,7 +98,7 @@ class LoginActivity : AppCompatActivity() {
             val password = etPassword.text.toString()
 
             if (email.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Por favor completa todos los campos", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(this, "Por favor completa todos los campos", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return@setOnClickListener
             }
 
@@ -149,14 +148,14 @@ class LoginActivity : AppCompatActivity() {
                     btnLogin.isEnabled = true
 
                     SupabaseModule.client.auth.currentUserOrNull()?.id?.let(AppSessionLock::onLogin)
-                    Toast.makeText(this@LoginActivity, "¡Bienvenido!", Toast.LENGTH_SHORT).show()
+                    AppFeedback.onNextScreen(HomeActivity::class.java, R.string.feedback_welcome)
                     val intent = Intent(this@LoginActivity, HomeActivity::class.java)
                     startActivity(intent)
                     finish()
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     btnLogin.isEnabled = true
-                    Toast.makeText(this@LoginActivity, e.userMessage("iniciar sesión"), Toast.LENGTH_LONG).show()
+                    AppFeedback.makeText(this@LoginActivity, e.userMessage("iniciar sesión"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
                 }
             }
         }
@@ -165,6 +164,11 @@ class LoginActivity : AppCompatActivity() {
             val intent = Intent(this, RegisterActivity::class.java)
             startActivity(intent)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        window.decorView.post { AppFeedback.showPending(this) }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -190,13 +194,13 @@ class LoginActivity : AppCompatActivity() {
                                 try {
                                     SupabaseModule.client.auth.updateUser { this.password = password }
                                     dialog.dismiss()
-                                    Toast.makeText(this@LoginActivity, "Contraseña actualizada", Toast.LENGTH_LONG).show()
-                                } catch (e: Exception) { input.error = e.userMessage() }
+                                    AppFeedback.makeText(this@LoginActivity, "Contraseña actualizada", AppFeedback.LENGTH_LONG, AppFeedback.Kind.SUCCESS).show()
+                                } catch (e: Exception) { input.error = e.userMessage("restablecer la contraseña") }
                             }
                         }
                     }
                     dialog.show()
-                } else Toast.makeText(this, "Correo confirmado. Inicia sesión para continuar.", Toast.LENGTH_LONG).show()
+                } else AppFeedback.makeText(this, "Correo confirmado. Inicia sesión para continuar.", AppFeedback.LENGTH_LONG, AppFeedback.Kind.SUCCESS).show()
             }
         }
     }

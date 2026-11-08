@@ -8,7 +8,6 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -141,7 +140,7 @@ fun Fragment.showForm(
                 onSaved()
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Toast.makeText(context, e.userMessage() ?: "No se pudo guardar", Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(root, e.userMessage("guardar los datos del formulario"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             } finally {
                 btnSave.isEnabled = true
             }

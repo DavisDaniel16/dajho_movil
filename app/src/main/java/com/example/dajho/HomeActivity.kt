@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.ImageView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.ViewCompat
@@ -189,6 +188,11 @@ class HomeActivity : ProtectedActivity() {
         }
     }
 
+    override fun onPostResume() {
+        super.onPostResume()
+        window.decorView.post { AppFeedback.showPending(this) }
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         BusinessSession.selectedId?.let { outState.putLong("negocio_seleccionado", it) }
         super.onSaveInstanceState(outState)
@@ -282,7 +286,7 @@ class HomeActivity : ProtectedActivity() {
                         }
                         checkAuthAndLoadData()
                     }.show()
-            } catch (e: Exception) { Toast.makeText(this@HomeActivity, e.userMessage(), Toast.LENGTH_LONG).show() }
+            } catch (e: Exception) { AppFeedback.makeText(this@HomeActivity, e.userMessage("seleccionar el negocio"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show() }
         }
     }
 

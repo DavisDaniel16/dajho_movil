@@ -9,7 +9,6 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -82,7 +81,7 @@ class EmpleadosFragment : Fragment() {
 
                 val negocioId = negocioIdActual
                 if (negocioId == null) {
-                    Toast.makeText(requireContext(), "Cargando negocio...", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "Cargando negocio...", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.INFO).show()
                     return@setOnClickListener
                 }
                 NuevoEmpleadoBottomSheet(negocioId)
@@ -112,10 +111,10 @@ class EmpleadosFragment : Fragment() {
 
                 val negocioId = membresia?.negocio_id
                 if (membresia?.rol != "propietario" || negocioId == null) {
-                    Toast.makeText(
+                    AppFeedback.makeText(
                         requireContext(),
                         "No tienes acceso al módulo de empleados",
-                        Toast.LENGTH_SHORT
+                        AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR
                     ).show()
                     (activity as? HomeActivity)?.replaceFragment(HomeFragment())
                     return@launch
@@ -149,10 +148,10 @@ class EmpleadosFragment : Fragment() {
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("EmpleadosFragment", "Error al cargar empleados" + ": " + e.userMessage())
-                Toast.makeText(
+                AppFeedback.makeText(
                     requireContext(),
                     e.userMessage("cargar la lista de empleados"),
-                    Toast.LENGTH_LONG
+                    AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR
                 ).show()
             } finally {
                 progressBar.visibility = View.GONE

@@ -7,7 +7,6 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import com.google.android.material.switchmaterial.SwitchMaterial
@@ -174,7 +173,7 @@ open class PerfilActivity : ProtectedActivity() {
 
     private fun openLegal(url: String) {
         if (url.isBlank()) {
-            Toast.makeText(this, "El enlace oficial aún no ha sido configurado por DAJHO", Toast.LENGTH_LONG).show()
+            AppFeedback.makeText(this, "El enlace oficial aún no ha sido configurado por DAJHO", AppFeedback.LENGTH_LONG, AppFeedback.Kind.INFO).show()
         } else startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
     }
 
@@ -246,7 +245,7 @@ open class PerfilActivity : ProtectedActivity() {
                 finish()
             } catch (e: Exception) {
                 Log.e("PerfilActivity", "Error al cerrar sesión" + ": " + e.userMessage())
-                Toast.makeText(this@PerfilActivity, "Error al cerrar sesión: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(this@PerfilActivity, e.userMessage("cerrar la sesión"), AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             }
         }
     }

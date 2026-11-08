@@ -6,7 +6,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
@@ -61,17 +60,17 @@ class RegisterActivity : AppCompatActivity() {
             val confirmPassword = etConfirmPassword.text.toString()
 
             if (name.isEmpty() || businessName.isEmpty() || businessIdentificacion.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
-                Toast.makeText(this, "Por favor completa todos los campos", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(this, "Por favor completa todos los campos", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return@setOnClickListener
             }
 
             if (password != confirmPassword) {
-                Toast.makeText(this, "Las contraseñas no coinciden", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(this, "Las contraseñas no coinciden", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return@setOnClickListener
             }
 
             if (password.length < 8) {
-                Toast.makeText(this, "La contraseña debe tener al menos 8 caracteres", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(this, "La contraseña debe tener al menos 8 caracteres", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return@setOnClickListener
             }
 
@@ -94,12 +93,12 @@ class RegisterActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     btnRegister.isEnabled = true
 
-                    Toast.makeText(this@RegisterActivity, "Cuenta creada. Revisa tu correo para confirmar", Toast.LENGTH_LONG).show()
+                    AppFeedback.onNextScreen(LoginActivity::class.java, R.string.feedback_account_created)
                     finish()
                 } catch (e: Exception) {
                     progressBar.visibility = View.GONE
                     btnRegister.isEnabled = true
-                    Toast.makeText(this@RegisterActivity, e.userMessage("crear la cuenta"), Toast.LENGTH_LONG).show()
+                    AppFeedback.makeText(this@RegisterActivity, e.userMessage("crear la cuenta"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
                 }
             }
         }

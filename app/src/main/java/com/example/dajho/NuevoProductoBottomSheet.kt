@@ -8,7 +8,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.AutoCompleteTextView
-import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -95,7 +94,7 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
                 varianteInputAdapter.notifyItemRemoved(position)
                 varianteInputAdapter.notifyItemRangeChanged(position, listaVariantesInput.size)
             } else {
-                Toast.makeText(requireContext(), "Debe haber al menos una variante", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), "Debe haber al menos una variante", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             }
         }
 
@@ -121,7 +120,7 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(context, e.userMessage("cargar las opciones del producto"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
 
@@ -181,7 +180,7 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
         val marca = etMarcaProducto.text.toString().trim()
 
         if (nombre.isEmpty()) {
-            Toast.makeText(requireContext(), "Por favor ingresa el nombre del producto", Toast.LENGTH_SHORT).show()
+            AppFeedback.makeText(requireContext(), "Por favor ingresa el nombre del producto", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             return
         }
 
@@ -199,7 +198,7 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
             val stockMinimoTexto = v.stockMinimo.trim()
 
             if (precioVentaTexto.isEmpty() || stockTexto.isEmpty()) {
-                Toast.makeText(requireContext(), "Completa los campos obligatorios de la Variante #$numero", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), "Completa los campos obligatorios de la Variante #$numero", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return
             }
 
@@ -222,17 +221,17 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
                 precioCosto == null || !precioCosto.isFinite() || precioCosto <= 0.0 ||
                 stock == null || stock < 0
             ) {
-                Toast.makeText(requireContext(), "Precios o stock inválidos en la Variante #$numero", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), "Precios o stock inválidos en la Variante #$numero", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return
             }
 
             if (precioVenta < precioCosto) {
-                Toast.makeText(requireContext(), "El precio de venta no puede ser menor al costo en la Variante #$numero", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), "El precio de venta no puede ser menor al costo en la Variante #$numero", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return
             }
 
             if (precioMinimo != null && (precioMinimo <= 0 || precioMinimo > precioVenta)) {
-                Toast.makeText(requireContext(), "El precio mínimo debe ser mayor a 0 y menor o igual al precio de venta en la Variante #$numero", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), "El precio mínimo debe ser mayor a 0 y menor o igual al precio de venta en la Variante #$numero", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return
             }
 
@@ -257,7 +256,7 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
-                    Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "No se pudo identificar tu negocio. Vuelve a Inicio y comprueba tu acceso.", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                     return@launch
                 }
 
@@ -293,7 +292,7 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
 
                 SyncManager.enqueueAndTrySync(requireContext(), negocioId, "crear_producto_offline", rpcPayload, reqId)
 
-                Toast.makeText(requireContext(), getString(R.string.sync_product_saved), Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), getString(R.string.sync_product_saved), AppFeedback.LENGTH_SHORT, AppFeedback.Kind.PENDING).show()
                 parentFragmentManager.setFragmentResult(
                     "request_inventario_actualizado",
                     bundleOf("actualizado" to true)
@@ -302,7 +301,7 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("NuevoProducto", "Error al crear producto" + ": " + e.userMessage())
-                Toast.makeText(requireContext(), e.userMessage() ?: "No se pudo guardar el producto", Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("guardar el producto"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             } finally {
                 btnCrearProducto.isEnabled = true
             }

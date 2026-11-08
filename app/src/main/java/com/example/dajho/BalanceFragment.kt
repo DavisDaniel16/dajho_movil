@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -114,7 +113,7 @@ class BalanceFragment : Fragment() {
                 GastoBottomSheet(negocioId)
                     .show(childFragmentManager, "GastoBottomSheet")
             } else {
-                Toast.makeText(requireContext(), "Cargando negocio...", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), "Cargando negocio...", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.INFO).show()
             }
         }
 
@@ -159,7 +158,7 @@ class BalanceFragment : Fragment() {
                     val balance = ScreenArgs.json.decodeFromString<BalanceNegocioDto>(cachedStr)
                     mostrarBalance(balance, negocioId)
                 } else {
-                    Toast.makeText(requireContext(), "Sin datos de balance guardados localmente", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "Sin datos de balance guardados localmente", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.INFO).show()
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e

@@ -10,7 +10,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -121,7 +120,7 @@ class EditarProductoBottomSheet() : BottomSheetDialogFragment() {
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("EditarProducto", "Error al consultar stock" + ": " + e.userMessage())
-                Toast.makeText(requireContext(), "No se pudo consultar el stock actual", Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("consultar las existencias del producto"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
     }
@@ -136,13 +135,13 @@ class EditarProductoBottomSheet() : BottomSheetDialogFragment() {
         val nuevoPrecioCosto = precioCostoStr.toDoubleOrNull()
 
         if (nuevoStock == null || nuevoStock < 0 || nuevoPrecioVenta == null || !nuevoPrecioVenta.isFinite() || nuevoPrecioCosto == null || !nuevoPrecioCosto.isFinite() || nuevoPrecioCosto <= 0 || nuevoPrecioVenta < nuevoPrecioCosto) {
-            Toast.makeText(requireContext(), "Por favor ingresa valores válidos", Toast.LENGTH_SHORT).show()
+            AppFeedback.makeText(requireContext(), "Por favor ingresa valores válidos", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             return
         }
 
         val varianteId = variante.id
         if (varianteId == null) {
-            Toast.makeText(requireContext(), "Error: ID de producto no válido", Toast.LENGTH_SHORT).show()
+            AppFeedback.makeText(requireContext(), "No se pudo identificar el producto. Cierra este formulario y ábrelo de nuevo desde Inventario.", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             return
         }
 
@@ -171,7 +170,7 @@ class EditarProductoBottomSheet() : BottomSheetDialogFragment() {
 
                 SyncManager.enqueueAndTrySync(requireContext(), negocio, "editar_variante", payload)
 
-                Toast.makeText(requireContext(), getString(R.string.sync_product_saved), Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), getString(R.string.sync_product_saved), AppFeedback.LENGTH_SHORT, AppFeedback.Kind.PENDING).show()
 
                 // Notificar al InventarioFragment para refrescar la lista
                 parentFragmentManager.setFragmentResult(
@@ -185,7 +184,7 @@ class EditarProductoBottomSheet() : BottomSheetDialogFragment() {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("EditarProducto", "Error al actualizar producto" + ": " + e.userMessage())
                 btnGuardarCambios.isEnabled = true
-                Toast.makeText(requireContext(), "Error al actualizar: ${e.userMessage()}", Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("actualizar el producto"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
     }

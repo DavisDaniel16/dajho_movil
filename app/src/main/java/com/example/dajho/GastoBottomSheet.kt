@@ -9,7 +9,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -78,13 +77,13 @@ class GastoBottomSheet() : BottomSheetDialogFragment() {
         val descripcion = etDescripcion.text.toString().trim()
 
         if (categoria.isEmpty() || montoStr.isEmpty()) {
-            Toast.makeText(requireContext(), "Por favor completa la categoría y el monto", Toast.LENGTH_SHORT).show()
+            AppFeedback.makeText(requireContext(), "Por favor completa la categoría y el monto", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             return
         }
 
         val monto = montoStr.toDoubleOrNull()
         if (monto == null || !monto.isFinite() || monto <= 0.0) {
-            Toast.makeText(requireContext(), "Ingresa un monto válido", Toast.LENGTH_SHORT).show()
+            AppFeedback.makeText(requireContext(), "Ingresa un monto válido", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             return
         }
 
@@ -95,7 +94,7 @@ class GastoBottomSheet() : BottomSheetDialogFragment() {
                 val currentUser = SessionAccess.localUser()
                 if (currentUser == null) {
                     btnGuardarGasto.isEnabled = true
-                    Toast.makeText(requireContext(), "No hay sesión de usuario activa", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "Tu sesión no está disponible. Inicia sesión para continuar.", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                     return@launch
                 }
                 val nuevoGasto = GastoInsertDto(
@@ -113,7 +112,7 @@ class GastoBottomSheet() : BottomSheetDialogFragment() {
                     put("descripcion", descripcion.takeIf { it.isNotBlank() })
                 }, requestId)
 
-                Toast.makeText(requireContext(), getString(R.string.sync_expense_saved), Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), getString(R.string.sync_expense_saved), AppFeedback.LENGTH_SHORT, AppFeedback.Kind.PENDING).show()
 
                 parentFragmentManager.setFragmentResult(
                     "request_balance_actualizado",
@@ -125,7 +124,7 @@ class GastoBottomSheet() : BottomSheetDialogFragment() {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("GastoBottomSheet", "Error al guardar gasto" + ": " + e.userMessage())
                 btnGuardarGasto.isEnabled = true
-                Toast.makeText(requireContext(), "Error al guardar: ${e.userMessage()}", Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("guardar el gasto"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
     }

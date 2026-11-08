@@ -12,7 +12,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
@@ -805,7 +804,7 @@ class ManagementFragment : Fragment() {
                                 .setNegativeButton("Cancelar", null).setPositiveButton("Autorizar") { _, _ ->
                                     viewLifecycleOwner.lifecycleScope.launch { try {
                                         SupabaseModule.client.postgrest.rpc("autorizar_soporte_propietario", buildJsonObject { put("p_acceso", row["id"]!!) }); load()
-                                    } catch (e: Exception) { Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show() } }
+                                    } catch (e: Exception) { AppFeedback.makeText(context, e.userMessage("completar la acción seleccionada"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show() } }
                                 }.show()
                         }
                     }
@@ -1111,7 +1110,7 @@ class ManagementFragment : Fragment() {
                     .setItems(providers.map { it.jsonObject.str("nombre") }.toTypedArray()) { _, provider ->
                         choosePurchaseItem(providers[provider].jsonObject, variants, mutableListOf())
                     }.show()
-            } catch (e: Exception) { Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show() }
+            } catch (e: Exception) { AppFeedback.makeText(context, e.userMessage("completar la acción seleccionada"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show() }
         }
     }
 

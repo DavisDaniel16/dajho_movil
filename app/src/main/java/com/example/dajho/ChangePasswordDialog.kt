@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Lifecycle
@@ -96,13 +95,12 @@ class ChangePasswordDialog : DialogFragment() {
     private fun finishChange(accountId: String) {
         model.consumeSuccess()
         val activity = requireActivity()
-        val appContext = activity.applicationContext
         clearFields()
-        Toast.makeText(appContext, R.string.password_changed, Toast.LENGTH_LONG).show()
         lifecycleScope.launch {
             withContext(NonCancellable) {
                 // Do not sign out a different account if it changed while the request was in flight.
                 if (SessionAccess.localUser()?.id == accountId) {
+                    AppFeedback.onNextScreen(LoginActivity::class.java, R.string.password_changed)
                     SupabaseModule.client.auth.clearSession()
                     AppSessionLock.clear()
                     BusinessSession.clear()

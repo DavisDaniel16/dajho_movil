@@ -13,7 +13,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
@@ -129,7 +128,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
             btnConfirmarVenta.isEnabled = true
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(context, e.userMessage("registrar la venta"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
 
@@ -170,7 +169,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val negocioId = userNegocioId ?: getNegocioId()
             if (negocioId == null) {
-                Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), "No se pudo identificar tu negocio. Vuelve a Inicio y comprueba tu acceso.", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                 return@launch
             }
 
@@ -257,7 +256,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
     private fun confirmarVenta() {
         val discount = runCatching { Money.amount(etDescuento.text.toString().ifBlank { "0" }) }.getOrNull()
         if (discount == null || discount.signum() < 0 || totalCalculado <= 0) {
-            Toast.makeText(requireContext(), "Revisa el descuento y el total (mayor que cero)", Toast.LENGTH_LONG).show()
+            AppFeedback.makeText(requireContext(), "Revisa el descuento y el total (mayor que cero)", AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             return
         }
         when (metodoPagoSeleccionado) {
@@ -265,20 +264,20 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
                 val recibidoStr = etMontoRecibido.text.toString().trim()
                 val recibido = recibidoStr.toDoubleOrNull() ?: 0.0
                 if (recibido < totalCalculado) {
-                    Toast.makeText(requireContext(), "El monto recibido es menor al total a pagar", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "El monto recibido es menor al total a pagar", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                     return
                 }
             }
             "Transferencia", "QR" -> {
                 val ref = etReferencia.text.toString().trim()
                 if (ref.isEmpty()) {
-                    Toast.makeText(requireContext(), "Por favor ingresa el número de referencia", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "Por favor ingresa el número de referencia", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                     return
                 }
             }
             "Fiado" -> {
                 if (clienteSeleccionadoId == null) {
-                    Toast.makeText(requireContext(), "Debes seleccionar un cliente para fiar", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "Debes seleccionar un cliente para fiar", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                     return
                 }
             }
@@ -290,7 +289,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
             try {
                 val negocioId = userNegocioId ?: getNegocioId()
                 if (negocioId == null) {
-                    Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(requireContext(), "No se pudo identificar tu negocio. Vuelve a Inicio y comprueba tu acceso.", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
                     btnConfirmarVenta.isEnabled = true
                     return@launch
                 }
@@ -360,7 +359,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
                 // 4. Verificar que la caja esté abierta antes de confirmar la venta
                 val db = DajhoDatabase.getInstance(requireContext())
                 if (!db.isCajaAbierta(negocioId)) {
-                    Toast.makeText(requireContext(), "No puedes registrar ventas con la caja cerrada. Abre la caja primero.", Toast.LENGTH_LONG).show()
+                    AppFeedback.makeText(requireContext(), "No puedes registrar ventas con la caja cerrada. Abre la caja primero.", AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
                     btnConfirmarVenta.isEnabled = true
                     return@launch
                 }
@@ -381,7 +380,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
                 // 5. Encolar operación para sincronización con Supabase
                 SyncManager.enqueueAndTrySync(requireContext(), negocioId, "registrar_venta", params)
 
-                Toast.makeText(requireContext(), getString(R.string.sync_sale_saved), Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(requireContext(), getString(R.string.sync_sale_saved), AppFeedback.LENGTH_LONG, AppFeedback.Kind.PENDING).show()
 
                 // Notificar a VentaFragment para limpiar el carrito
                 parentFragmentManager.setFragmentResult(
@@ -401,7 +400,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
                 }
                 Log.e("CobroBottomSheet", "Error al registrar venta" + ": " + e.userMessage())
                 btnConfirmarVenta.isEnabled = true
-                Toast.makeText(requireContext(), "Error al registrar venta: ${e.userMessage()}", Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("registrar la venta"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
     }

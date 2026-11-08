@@ -8,7 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -138,7 +137,7 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
 
                 SyncManager.enqueueAndTrySync(requireContext(), userNegocioId ?: 0L, "actualizar_perfil", payload)
 
-                Toast.makeText(requireContext(), getString(R.string.sync_profile_saved), Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), getString(R.string.sync_profile_saved), AppFeedback.LENGTH_SHORT, AppFeedback.Kind.PENDING).show()
 
                 // Notificar a HomeActivity para refrescar la cabecera
                 parentFragmentManager.setFragmentResult(
@@ -152,7 +151,7 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("PerfilBottomSheet", "Error al guardar perfil" + ": " + e.userMessage())
                 btnGuardarPerfil.isEnabled = true
-                Toast.makeText(requireContext(), "Error al guardar: ${e.userMessage()}", Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("guardar los cambios de perfil"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
     }
@@ -169,7 +168,7 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("PerfilBottomSheet", "Error al cerrar sesión" + ": " + e.userMessage())
-                Toast.makeText(requireContext(), "Error al cerrar sesión: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("cerrar la sesión"), AppFeedback.LENGTH_SHORT, AppFeedback.Kind.ERROR).show()
             }
         }
     }

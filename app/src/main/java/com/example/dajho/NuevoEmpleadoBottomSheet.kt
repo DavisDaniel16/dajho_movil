@@ -8,7 +8,6 @@ import android.util.Patterns
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.button.MaterialButton
@@ -100,7 +99,7 @@ class NuevoEmpleadoBottomSheet() : BottomSheetDialogFragment() {
                     SyncManager.enqueueAndTrySync(requireContext(), negocioId, "crear_empleado", params)
                 }
 
-                Toast.makeText(requireContext(), if (online) "Empleado registrado en el servidor" else getString(R.string.sync_employee_saved), Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), if (online) "Empleado registrado en el servidor" else getString(R.string.sync_employee_saved), AppFeedback.LENGTH_SHORT, if (online) AppFeedback.Kind.SUCCESS else AppFeedback.Kind.PENDING).show()
 
                 parentFragmentManager.setFragmentResult(
                     REQUEST_EMPLEADOS_ACTUALIZADOS,
@@ -109,10 +108,10 @@ class NuevoEmpleadoBottomSheet() : BottomSheetDialogFragment() {
                 dismiss()
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Toast.makeText(
+                AppFeedback.makeText(
                     requireContext(),
                     e.userMessage("registrar el empleado"),
-                    Toast.LENGTH_LONG
+                    AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR
                 ).show()
             } finally {
                 btnGuardarEmpleado.isEnabled = true

@@ -12,7 +12,6 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
@@ -147,7 +146,7 @@ class AdminFragment : Fragment() {
                 tvEmptyAdmin.text = e.userMessage()
                 tvEmptyAdmin.visibility = View.VISIBLE
                 containerAdminItems.removeAllViews()
-                Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(context, e.userMessage("completar la acción administrativa"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             } finally {
                 progressAdmin.visibility = View.GONE
             }
@@ -304,7 +303,7 @@ class AdminFragment : Fragment() {
                         put("p_negocio", n["id"]!!)
                         put("p_estado", targetEstado)
                     })
-                    Toast.makeText(context, "Estado de negocio actualizado a $targetEstado", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(context, "Estado de negocio actualizado a $targetEstado", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.SUCCESS).show()
                     loadData()
                 }
             }
@@ -316,7 +315,7 @@ class AdminFragment : Fragment() {
                         put("p_negocio", n["id"]!!)
                         put("p_motivo", values[0])
                     })
-                    Toast.makeText(context, "Solicitud de soporte creada", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(context, "Solicitud de soporte creada", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.SUCCESS).show()
                     loadData()
                 }
             }
@@ -361,7 +360,7 @@ class AdminFragment : Fragment() {
                     SupabaseModule.client.postgrest.rpc("admin_validar_pago", buildJsonObject {
                         put("p_pago", p["id"]!!)
                     })
-                    Toast.makeText(context, "Pago #$id validado correctamente", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(context, "Pago #$id validado correctamente", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.SUCCESS).show()
                     loadData()
                 }
             }
@@ -428,7 +427,7 @@ class AdminFragment : Fragment() {
                         put("p_acceso", s["id"]!!)
                         put("p_fin", end.toString())
                     })
-                    Toast.makeText(context, "Solicitud #$id autorizada por jerarquía", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(context, "Solicitud #$id autorizada por jerarquía", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.SUCCESS).show()
                     loadData()
                 }
             }
@@ -517,12 +516,12 @@ class AdminFragment : Fragment() {
 
                 showForm("Código del Autenticador", listOf(FormField("Código de 6 dígitos", numeric = true))) { values ->
                     SupabaseModule.client.auth.mfa.createChallengeAndVerify(id, values[0])
-                    Toast.makeText(context, "Autenticación 2FA verificada con éxito", Toast.LENGTH_SHORT).show()
+                    AppFeedback.makeText(context, "Autenticación 2FA verificada con éxito", AppFeedback.LENGTH_SHORT, AppFeedback.Kind.SUCCESS).show()
                     loadData()
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(context, e.userMessage("completar la acción administrativa"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
     }
@@ -537,7 +536,7 @@ class AdminFragment : Fragment() {
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Toast.makeText(context, e.userMessage(), Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(context, e.userMessage("completar la acción administrativa"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
     }

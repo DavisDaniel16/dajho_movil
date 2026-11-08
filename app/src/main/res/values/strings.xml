@@ -40,4 +40,7 @@
     <string name="sync_profile_saved">Cambios de perfil guardados para sincronizar con el servidor.</string>
     <string name="sync_product_saved">Producto guardado para sincronizar con el servidor.</string>
     <string name="sync_employee_saved">Solicitud de alta del empleado guardada. El acceso estará disponible cuando el servidor la confirme.</string>
+    <string name="feedback_close">Cerrar</string>
+    <string name="feedback_welcome">Sesión iniciada. Ya puedes trabajar en tu negocio.</string>
+    <string name="feedback_account_created">Cuenta creada. Revisa tu correo para confirmar la cuenta antes de iniciar sesión.</string>
 </resources>

@@ -9,7 +9,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -85,7 +84,7 @@ class EditarPerfilBottomSheet() : BottomSheetDialogFragment() {
 
                 SyncManager.enqueueAndTrySync(requireContext(), negocioId ?: 0L, "actualizar_perfil", payload)
 
-                Toast.makeText(requireContext(), getString(R.string.sync_profile_saved), Toast.LENGTH_SHORT).show()
+                AppFeedback.makeText(requireContext(), getString(R.string.sync_profile_saved), AppFeedback.LENGTH_SHORT, AppFeedback.Kind.PENDING).show()
 
                 parentFragmentManager.setFragmentResult(
                     "request_perfil_actualizado",
@@ -101,7 +100,7 @@ class EditarPerfilBottomSheet() : BottomSheetDialogFragment() {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Log.e("EditarPerfil", "Error al actualizar perfil" + ": " + e.userMessage())
                 btnGuardarCambios.isEnabled = true
-                Toast.makeText(requireContext(), "Error al guardar: ${e.userMessage()}", Toast.LENGTH_LONG).show()
+                AppFeedback.makeText(requireContext(), e.userMessage("guardar los cambios de perfil"), AppFeedback.LENGTH_LONG, AppFeedback.Kind.ERROR).show()
             }
         }
     }
