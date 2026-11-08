@@ -14,3 +14,13 @@
 .cxx
 local.properties
 .idea/
+
+# Agentes, habilidades y archivos de entorno AI/MCP
+.agents/
+.claude/
+*.md
+skills-lock.json
+supabase-mcp.json
+supabase/
+tools/
+
