@@ -28,11 +28,17 @@ import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 
 class AppLockActivity : AppCompatActivity() {
+    companion object {
+        const val EXTRA_SET_LOCK_ENABLED = "set_lock_enabled"
+    }
+
+    private val isPreferenceChange get() = intent.hasExtra(EXTRA_SET_LOCK_ENABLED)
     private lateinit var prompt: BiometricPrompt
     private lateinit var message: TextView
     private var authenticating = false
     private var accountId: String? = null
     private var openingLogin = false
+    private var preferenceChangeCancelled = false
     private val keyguard by lazy { getSystemService(KeyguardManager::class.java) }
     private val credentialLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         authenticating = false
@@ -53,7 +59,13 @@ class AppLockActivity : AppCompatActivity() {
         accountId = savedInstanceState?.getString("lock_account")
         authenticating = savedInstanceState?.getBoolean("authenticating") ?: false
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() { moveTaskToBack(true) }
+            override fun handleOnBackPressed() {
+                if (isPreferenceChange) {
+                    preferenceChangeCancelled = true
+                    prompt.cancelAuthentication()
+                    finish()
+                } else moveTaskToBack(true)
+            }
         })
         prompt = BiometricPrompt(this, ContextCompat.getMainExecutor(this),
             object : BiometricPrompt.AuthenticationCallback() {
@@ -82,8 +94,17 @@ class AppLockActivity : AppCompatActivity() {
             runCatching { startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS)) }
                 .onFailure { message.setText(R.string.lock_settings_unavailable) }
         }
+        if (isPreferenceChange) {
+            message.setText(R.string.lock_setting_confirm)
+            findViewById<Button>(R.id.btnLockSignOut).setText(R.string.lock_setting_cancel)
+        }
         findViewById<Button>(R.id.btnLockSignOut).setOnClickListener {
+            preferenceChangeCancelled = isPreferenceChange
             prompt.cancelAuthentication()
+            if (isPreferenceChange) {
+                finish()
+                return@setOnClickListener
+            }
             lifecycleScope.launch {
                 // Local logout must work offline; no cached account may auto-open the app.
                 SessionAccess.signOut(applicationContext)
@@ -98,6 +119,11 @@ class AppLockActivity : AppCompatActivity() {
             }
             accountId = id
             AppSessionLock.state.bindSession(id)
+            if (!isPreferenceChange && !AppLockPreferences.from(this@AppLockActivity).isEnabled(id)) {
+                setResult(RESULT_OK)
+                finish()
+                return@launch
+            }
             if (savedInstanceState == null) requestAuthentication()
         }
         lifecycleScope.launch {
@@ -164,12 +190,20 @@ class AppLockActivity : AppCompatActivity() {
     }
 
     private fun unlock() {
+        if (preferenceChangeCancelled) return
         val id = accountId ?: return
         lifecycleScope.launch {
-            if (openingLogin || SessionAccess.localUser()?.id != id ||
+            val currentId = SessionAccess.localUser()?.id
+            if (preferenceChangeCancelled || isFinishing) return@launch
+            if (openingLogin || currentId != id ||
                 !AppSessionLock.state.authenticate(id)) {
                 openLogin()
                 return@launch
+            }
+            if (isPreferenceChange) {
+                AppLockPreferences.from(this@AppLockActivity).setEnabled(
+                    id, intent.getBooleanExtra(EXTRA_SET_LOCK_ENABLED, false)
+                )
             }
             setResult(RESULT_OK)
             finish()

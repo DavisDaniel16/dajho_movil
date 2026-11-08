@@ -27,6 +27,8 @@ abstract class ProtectedActivity : AppCompatActivity() {
     private var gateJob: Job? = null
     private var openingLock = false
     private var contentAuthorized = false
+    private var activeAccountId: String? = null
+    private val lockPreferences by lazy { AppLockPreferences.from(this) }
     private val unlockLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         openingLock = false
         checkAccess()
@@ -84,6 +86,7 @@ abstract class ProtectedActivity : AppCompatActivity() {
         gateJob = lifecycleScope.launch {
             val id = authenticatedUserId()
             AppSessionLock.state.bindSession(id)
+            activeAccountId = id
             if (id == null) {
                 BusinessSession.clear()
                 setContentAuthorized(false)
@@ -91,6 +94,10 @@ abstract class ProtectedActivity : AppCompatActivity() {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 })
                 finish()
+            } else if (!lockPreferences.isEnabled(id)) {
+                // A disabled preference allows local access, but still requires an account.
+                handler.removeCallbacks(deadline)
+                setContentAuthorized(true)
             } else if (AppSessionLock.state.checkTimeout()) {
                 setContentAuthorized(false)
                 if (!openingLock) {
@@ -127,7 +134,10 @@ abstract class ProtectedActivity : AppCompatActivity() {
     }
 
     private fun acceptInteraction(): Boolean {
-        if (!contentAuthorized || !AppSessionLock.state.recordInteraction()) {
+        val id = activeAccountId
+        val allowsInput = contentAuthorized && id != null &&
+            (!lockPreferences.isEnabled(id) || AppSessionLock.state.recordInteraction())
+        if (!allowsInput) {
             setContentAuthorized(false)
             handler.post { checkAccess() }
             return false

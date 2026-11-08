@@ -9,6 +9,8 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import com.google.android.material.switchmaterial.SwitchMaterial
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -36,6 +38,9 @@ open class PerfilActivity : ProtectedActivity() {
     private var userNegocioId: Long? = null
     private var nombreUsuarioActual: String = ""
     private var nombreNegocioActual: String = ""
+    private val lockSettingLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        refreshLockSetting()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -126,8 +131,37 @@ open class PerfilActivity : ProtectedActivity() {
             )
         }
 
+        findViewById<SwitchMaterial>(R.id.switchBloqueoInactividad).setOnClickListener { view ->
+            val toggle = view as SwitchMaterial
+            val requested = toggle.isChecked
+            // Never display a preference as saved until system authentication succeeds.
+            toggle.isChecked = !requested
+            requestLockPreferenceChange(requested)
+        }
+
         btnCerrarSesion.setOnClickListener {
             cerrarSesion()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshLockSetting()
+    }
+
+    protected open fun requestLockPreferenceChange(enabled: Boolean) {
+        lockSettingLauncher.launch(Intent(this, AppLockActivity::class.java).apply {
+            putExtra(AppLockActivity.EXTRA_SET_LOCK_ENABLED, enabled)
+        })
+    }
+
+    private fun refreshLockSetting() {
+        val toggle = findViewById<SwitchMaterial>(R.id.switchBloqueoInactividad)
+        toggle.isEnabled = false
+        lifecycleScope.launch {
+            val id = authenticatedUserId()
+            toggle.isChecked = id != null && AppLockPreferences.from(this@PerfilActivity).isEnabled(id)
+            toggle.isEnabled = id != null
         }
     }
 

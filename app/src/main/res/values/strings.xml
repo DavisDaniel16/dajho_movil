@@ -10,4 +10,8 @@
     <string name="lock_failed">No se reconoció la biometría. Inténtalo de nuevo.</string>
     <string name="lock_device_credential">Usar PIN, patrón o contraseña</string>
     <string name="lock_settings_unavailable">Abre los ajustes de seguridad del dispositivo para configurar su bloqueo.</string>
+    <string name="lock_setting_title">Bloqueo por inactividad</string>
+    <string name="lock_setting_description">Pide huella o el PIN, patrón o contraseña del teléfono tras 5 minutos sin actividad y al volver a abrir DAJHO. Opcional en este dispositivo.</string>
+    <string name="lock_setting_confirm">Confirma tu identidad para cambiar el bloqueo por inactividad.</string>
+    <string name="lock_setting_cancel">Cancelar</string>
 </resources>

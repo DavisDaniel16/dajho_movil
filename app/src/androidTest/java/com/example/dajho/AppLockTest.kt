@@ -19,8 +19,43 @@ import org.junit.runner.RunWith
 class AppLockTest {
     private val instrumentation get() = InstrumentationRegistry.getInstrumentation()
 
-    @Before fun resetGrant() { instrumentation.runOnMainSync { AppSessionLock.clear() } }
-    @After fun clearGrant() { instrumentation.runOnMainSync { AppSessionLock.clear() } }
+    @Before fun resetGrant() {
+        instrumentation.runOnMainSync {
+            AppSessionLock.clear()
+            AppLockPreferences.from(instrumentation.targetContext).setEnabled("lock-test-user", true)
+        }
+    }
+    @After fun clearGrant() {
+        instrumentation.runOnMainSync {
+            AppSessionLock.clear()
+            AppLockPreferences.from(instrumentation.targetContext).setEnabled("lock-test-user", false)
+        }
+    }
+
+    @Test fun disabledLockAllowsRestoredAccountAndInputWithoutUnlock() {
+        instrumentation.runOnMainSync {
+            AppLockPreferences.from(instrumentation.targetContext).setEnabled("lock-test-user", false)
+        }
+        ActivityScenario.launch(LockTestHostActivity::class.java).use { scenario ->
+            instrumentation.waitForIdleSync()
+            scenario.onActivity {
+                assertEquals(View.VISIBLE, it.window.decorView.visibility)
+                assertEquals(0, it.unlockRequests)
+                // No fresh login grant is needed when this account opted out.
+                assertTrue(AppSessionLock.state.isLocked)
+                it.window.callback!!.dispatchKeyEvent(
+                    android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_A)
+                )
+                assertEquals(View.VISIBLE, it.window.decorView.visibility)
+            }
+            scenario.recreate()
+            instrumentation.waitForIdleSync()
+            scenario.onActivity {
+                assertEquals(View.VISIBLE, it.window.decorView.visibility)
+                assertEquals(0, it.unlockRequests)
+            }
+        }
+    }
 
     @Test fun restoredAccountIsHiddenAndRequiresUnlock() {
         ActivityScenario.launch(LockTestHostActivity::class.java).use { scenario ->
