@@ -1,0 +1,420 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_app">
+
+    <!-- Header bar -->
+    <LinearLayout
+        android:id="@+id/headerAdmin"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Administración DAJHO"
+                android:textColor="#1E293B"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Panel de Control del Sistema"
+                android:textColor="#64748B"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btnRefrescarAdmin"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Refrescar datos"
+            android:padding="10dp"
+            android:src="@drawable/ic_refresh"
+            app:tint="@color/sky" />
+
+    </LinearLayout>
+
+    <!-- Content ScrollView -->
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollViewAdmin"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingBottom="24dp"
+        app:layout_constraintTop_toBottomOf="@id/headerAdmin"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp">
+
+            <!-- MFA Security Status Banner -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardMfaBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="1dp"
+                app:strokeColor="#FED7AA"
+                app:cardBackgroundColor="#FFF7ED">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:id="@+id/tvMfaBannerTitle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Seguridad 2FA (MFA)"
+                            android:textColor="#9A3412"
+                            android:textSize="15sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chipMfaStatus"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Pendiente"
+                            android:textColor="#C2410C"
+                            app:chipBackgroundColor="#FFEDD5"
+                            app:chipMinHeight="28dp"
+                            style="@style/Widget.MaterialComponents.Chip.Action" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvMfaBannerSubtitle"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Se requiere verificar tu segundo factor de autenticación para realizar operaciones administrativas."
+                        android:textColor="#C2410C"
+                        android:textSize="13sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnVerificarMfa"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="6dp"
+                            android:text="Verificar Código"
+                            android:textSize="13sp"
+                            app:cornerRadius="10dp"
+                            app:backgroundTint="#EA580C"
+                            android:textColor="@color/white" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnConfigurarMfa"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="6dp"
+                            android:text="Configurar 2FA"
+                            android:textSize="13sp"
+                            app:cornerRadius="10dp"
+                            android:textColor="#9A3412"
+                            app:strokeColor="#FDBA74" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Metrics Summary Section -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:overScrollMode="never"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <!-- Card Negocios Metric -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardMetricNegocios"
+                        android:layout_width="150dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="10dp"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="1dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="#E2E8F0"
+                        app:cardBackgroundColor="@color/white">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Negocios"
+                                android:textColor="#64748B"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvCountNegocios"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="0"
+                                android:textColor="#1E293B"
+                                android:textSize="22sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvDetailNegocios"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="0 activos"
+                                android:textColor="#16A34A"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Card Pagos Metric -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardMetricPagos"
+                        android:layout_width="150dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="10dp"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="1dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="#E2E8F0"
+                        app:cardBackgroundColor="@color/white">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Pagos Pendientes"
+                                android:textColor="#64748B"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvCountPagos"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="0"
+                                android:textColor="#1E293B"
+                                android:textSize="22sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvDetailPagos"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="$0.00 total"
+                                android:textColor="#2563EB"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <!-- Card Soporte Metric -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardMetricSoporte"
+                        android:layout_width="150dp"
+                        android:layout_height="wrap_content"
+                        app:cardCornerRadius="14dp"
+                        app:cardElevation="1dp"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="#E2E8F0"
+                        app:cardBackgroundColor="@color/white">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:padding="14dp">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Solicitudes Soporte"
+                                android:textColor="#64748B"
+                                android:textSize="12sp" />
+
+                            <TextView
+                                android:id="@+id/tvCountSoporte"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="0"
+                                android:textColor="#1E293B"
+                                android:textSize="22sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvDetailSoporte"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="0 por autorizar"
+                                android:textColor="#D97706"
+                                android:textSize="11sp" />
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+            </HorizontalScrollView>
+
+            <!-- Navigation Section Chips -->
+            <HorizontalScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbars="none"
+                android:overScrollMode="never"
+                android:layout_marginBottom="12dp">
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chipGroupSections"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:singleSelection="true"
+                    app:selectionRequired="true">
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTabNegocios"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="Negocios"
+                        app:chipCornerRadius="20dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTabPagos"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Pagos Pendientes"
+                        app:chipCornerRadius="20dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTabSoporte"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Solicitudes Soporte"
+                        app:chipCornerRadius="20dp" />
+
+                    <com.google.android.material.chip.Chip
+                        android:id="@+id/chipTabSeguridad"
+                        style="@style/Widget.MaterialComponents.Chip.Choice"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Seguridad MFA"
+                        app:chipCornerRadius="20dp" />
+
+                </com.google.android.material.chip.ChipGroup>
+            </HorizontalScrollView>
+
+            <!-- Search Field (Visible mainly for Negocios) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilBuscarAdmin"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:hint="Buscar por nombre o ID..."
+                app:startIconDrawable="@drawable/ic_search"
+                app:boxCornerRadiusTopStart="12dp"
+                app:boxCornerRadiusTopEnd="12dp"
+                app:boxCornerRadiusBottomStart="12dp"
+                app:boxCornerRadiusBottomEnd="12dp">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etBuscarAdmin"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:singleLine="true"
+                    android:textSize="14sp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Container for Cards / Items -->
+            <LinearLayout
+                android:id="@+id/containerAdminItems"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <!-- Empty State View -->
+            <TextView
+                android:id="@+id/tvEmptyAdmin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginVertical="32dp"
+                android:gravity="center"
+                android:text="No hay datos registrados en esta sección"
+                android:textColor="#64748B"
+                android:textSize="15sp"
+                android:visibility="gone" />
+
+            <!-- Progress Indicator -->
+            <ProgressBar
+                android:id="@+id/progressAdmin"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginVertical="32dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
