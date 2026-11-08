@@ -171,7 +171,7 @@ class EditarProductoBottomSheet() : BottomSheetDialogFragment() {
 
                 SyncManager.enqueueAndTrySync(requireContext(), negocio, "editar_variante", payload)
 
-                Toast.makeText(requireContext(), "¡Producto actualizado con éxito!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.sync_product_saved), Toast.LENGTH_SHORT).show()
 
                 // Notificar al InventarioFragment para refrescar la lista
                 parentFragmentManager.setFragmentResult(

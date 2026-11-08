@@ -151,7 +151,7 @@ class EmpleadosFragment : Fragment() {
                 Log.e("EmpleadosFragment", "Error al cargar empleados" + ": " + e.userMessage())
                 Toast.makeText(
                     requireContext(),
-                    "No se pudo cargar la lista de empleados",
+                    e.userMessage("cargar la lista de empleados"),
                     Toast.LENGTH_LONG
                 ).show()
             } finally {

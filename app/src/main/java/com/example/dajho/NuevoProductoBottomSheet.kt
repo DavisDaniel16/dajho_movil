@@ -293,7 +293,7 @@ class NuevoProductoBottomSheet : BottomSheetDialogFragment() {
 
                 SyncManager.enqueueAndTrySync(requireContext(), negocioId, "crear_producto_offline", rpcPayload, reqId)
 
-                Toast.makeText(requireContext(), "Producto registrado", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.sync_product_saved), Toast.LENGTH_SHORT).show()
                 parentFragmentManager.setFragmentResult(
                     "request_inventario_actualizado",
                     bundleOf("actualizado" to true)

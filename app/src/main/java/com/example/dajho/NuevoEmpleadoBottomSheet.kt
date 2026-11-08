@@ -93,13 +93,14 @@ class NuevoEmpleadoBottomSheet() : BottomSheetDialogFragment() {
                     put("p_password", password)
                     put("p_tope_descuento_usd", tope)
                 }
-                if (requireContext().hasInternetConnection()) {
+                val online = requireContext().hasInternetConnection()
+                if (online) {
                     EmployeeService.create(params)
                 } else {
                     SyncManager.enqueueAndTrySync(requireContext(), negocioId, "crear_empleado", params)
                 }
 
-                Toast.makeText(requireContext(), "Empleado registrado con éxito", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), if (online) "Empleado registrado en el servidor" else getString(R.string.sync_employee_saved), Toast.LENGTH_SHORT).show()
 
                 parentFragmentManager.setFragmentResult(
                     REQUEST_EMPLEADOS_ACTUALIZADOS,
@@ -110,7 +111,7 @@ class NuevoEmpleadoBottomSheet() : BottomSheetDialogFragment() {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 Toast.makeText(
                     requireContext(),
-                    e.userMessage() ?: "No se pudo agregar el empleado",
+                    e.userMessage("registrar el empleado"),
                     Toast.LENGTH_LONG
                 ).show()
             } finally {

@@ -35,4 +35,9 @@
     <string name="password_account_changed">La cuenta cambió durante la operación. Abre de nuevo este formulario.</string>
     <string name="password_session_required">Necesitas una sesión válida con correo y contraseña. Vuelve a iniciar sesión.</string>
     <string name="password_unexpected">No se pudo cambiar la contraseña. Inténtalo más tarde.</string>
+    <string name="sync_sale_saved">Venta guardada en este dispositivo. Se sincronizará en segundo plano.</string>
+    <string name="sync_expense_saved">Gasto guardado en este dispositivo. Se sincronizará en segundo plano.</string>
+    <string name="sync_profile_saved">Cambios de perfil guardados para sincronizar con el servidor.</string>
+    <string name="sync_product_saved">Producto guardado para sincronizar con el servidor.</string>
+    <string name="sync_employee_saved">Solicitud de alta del empleado guardada. El acceso estará disponible cuando el servidor la confirme.</string>
 </resources>

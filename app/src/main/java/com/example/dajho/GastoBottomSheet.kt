@@ -113,7 +113,7 @@ class GastoBottomSheet() : BottomSheetDialogFragment() {
                     put("descripcion", descripcion.takeIf { it.isNotBlank() })
                 }, requestId)
 
-                Toast.makeText(requireContext(), "¡Gasto registrado con éxito!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.sync_expense_saved), Toast.LENGTH_SHORT).show()
 
                 parentFragmentManager.setFragmentResult(
                     "request_balance_actualizado",

@@ -381,7 +381,7 @@ class CobroBottomSheet() : BottomSheetDialogFragment() {
                 // 5. Encolar operación para sincronización con Supabase
                 SyncManager.enqueueAndTrySync(requireContext(), negocioId, "registrar_venta", params)
 
-                Toast.makeText(requireContext(), "¡Venta registrada con éxito!", Toast.LENGTH_LONG).show()
+                Toast.makeText(requireContext(), getString(R.string.sync_sale_saved), Toast.LENGTH_LONG).show()
 
                 // Notificar a VentaFragment para limpiar el carrito
                 parentFragmentManager.setFragmentResult(

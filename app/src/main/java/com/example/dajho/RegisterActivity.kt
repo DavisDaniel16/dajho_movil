@@ -99,7 +99,7 @@ class RegisterActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     progressBar.visibility = View.GONE
                     btnRegister.isEnabled = true
-                    Toast.makeText(this@RegisterActivity, "Error en el registro: ${e.userMessage()}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@RegisterActivity, e.userMessage("crear la cuenta"), Toast.LENGTH_LONG).show()
                 }
             }
         }

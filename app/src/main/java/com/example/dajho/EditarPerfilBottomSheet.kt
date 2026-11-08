@@ -85,7 +85,7 @@ class EditarPerfilBottomSheet() : BottomSheetDialogFragment() {
 
                 SyncManager.enqueueAndTrySync(requireContext(), negocioId ?: 0L, "actualizar_perfil", payload)
 
-                Toast.makeText(requireContext(), "¡Perfil actualizado con éxito!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.sync_profile_saved), Toast.LENGTH_SHORT).show()
 
                 parentFragmentManager.setFragmentResult(
                     "request_perfil_actualizado",

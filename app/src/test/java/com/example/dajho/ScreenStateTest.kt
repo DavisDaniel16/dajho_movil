@@ -14,6 +14,9 @@ class ScreenStateTest {
     }
     @Test fun errorsDoNotExposeHttpHeaders() {
         val error = io.github.jan.supabase.exceptions.RestException("Sin acceso", null, 403, "URL: https://example.invalid\nHeaders: Authorization=Bearer secret")
-        assertEquals("Sin acceso", error.userMessage())
+        assertTrue(error.userMessage().contains("permisos"))
+        assertFalse(error.userMessage().contains("secret"))
+        assertFalse(error.userMessage().contains("Headers:"))
+        assertFalse(error.userMessage().contains("https://"))
     }
 }

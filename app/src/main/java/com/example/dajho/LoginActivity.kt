@@ -156,7 +156,7 @@ class LoginActivity : AppCompatActivity() {
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     btnLogin.isEnabled = true
-                    Toast.makeText(this@LoginActivity, "Error: ${e.userMessage()}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@LoginActivity, e.userMessage("iniciar sesión"), Toast.LENGTH_LONG).show()
                 }
             }
         }

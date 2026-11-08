@@ -138,7 +138,7 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
 
                 SyncManager.enqueueAndTrySync(requireContext(), userNegocioId ?: 0L, "actualizar_perfil", payload)
 
-                Toast.makeText(requireContext(), "¡Perfil actualizado con éxito!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), getString(R.string.sync_profile_saved), Toast.LENGTH_SHORT).show()
 
                 // Notificar a HomeActivity para refrescar la cabecera
                 parentFragmentManager.setFragmentResult(
