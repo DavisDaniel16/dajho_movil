@@ -160,8 +160,7 @@ class PerfilBottomSheet : BottomSheetDialogFragment() {
     private fun cerrarSesion() {
         viewLifecycleOwner.lifecycleScope.launch {
             try {
-                SupabaseModule.client.auth.signOut()
-                BusinessSession.clear()
+                SessionAccess.signOut(requireContext().applicationContext)
                 val intent = Intent(requireContext(), LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }

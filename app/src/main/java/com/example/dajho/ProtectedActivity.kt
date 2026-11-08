@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -46,6 +47,11 @@ abstract class ProtectedActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         window.decorView.visibility = View.INVISIBLE
         supportFragmentManager.registerFragmentLifecycleCallbacks(dialogs, true)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                SupabaseModule.client.auth.sessionStatus.collect { checkAccess() }
+            }
+        }
     }
 
     override fun onPostCreate(savedInstanceState: Bundle?) {
@@ -73,11 +79,13 @@ abstract class ProtectedActivity : AppCompatActivity() {
 
     private fun checkAccess() {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED) || isFinishing) return
+        if (AppSessionLock.state.checkTimeout()) setContentAuthorized(false)
         gateJob?.cancel()
         gateJob = lifecycleScope.launch {
             val id = authenticatedUserId()
             AppSessionLock.state.bindSession(id)
             if (id == null) {
+                BusinessSession.clear()
                 setContentAuthorized(false)
                 startActivity(Intent(this@ProtectedActivity, LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -98,8 +106,7 @@ abstract class ProtectedActivity : AppCompatActivity() {
     }
 
     protected open suspend fun authenticatedUserId(): String? {
-        SupabaseModule.client.auth.awaitInitialization()
-        return SupabaseModule.client.auth.currentUserOrNull()?.id
+        return SessionAccess.localUser()?.id
     }
 
     protected open fun requestUnlock() {

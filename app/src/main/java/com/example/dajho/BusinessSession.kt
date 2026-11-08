@@ -1,7 +1,6 @@
 package com.example.dajho
 
 import android.content.Context
-import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
 
 /** Resolves active memberships and supports offline caching. */
@@ -31,8 +30,7 @@ object BusinessSession {
         cachedMemberships?.takeIf { userId != null && ownerId == userId }
 
     suspend fun memberships(context: Context? = null, forceRefresh: Boolean = false): List<NegocioUsuarioDto> {
-        runCatching { SupabaseModule.client.auth.awaitInitialization() }
-        val uid = SupabaseModule.client.auth.currentUserOrNull()?.id
+        val uid = SessionAccess.localUser()?.id
         if (uid == null) {
             clear()
             return emptyList()

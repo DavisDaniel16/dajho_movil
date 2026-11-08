@@ -88,16 +88,16 @@ class GastoBottomSheet() : BottomSheetDialogFragment() {
             return
         }
 
-        val currentUser = SupabaseModule.client.auth.currentUserOrNull()
-        if (currentUser == null) {
-            Toast.makeText(requireContext(), "No hay sesión de usuario activa", Toast.LENGTH_SHORT).show()
-            return
-        }
-
         btnGuardarGasto.isEnabled = false
 
         viewLifecycleOwner.lifecycleScope.launch {
             try {
+                val currentUser = SessionAccess.localUser()
+                if (currentUser == null) {
+                    btnGuardarGasto.isEnabled = true
+                    Toast.makeText(requireContext(), "No hay sesión de usuario activa", Toast.LENGTH_SHORT).show()
+                    return@launch
+                }
                 val nuevoGasto = GastoInsertDto(
                     negocio_id = negocioId,
                     usuario_id = currentUser.id,

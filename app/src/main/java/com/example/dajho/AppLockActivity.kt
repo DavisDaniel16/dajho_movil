@@ -21,6 +21,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import io.github.jan.supabase.gotrue.SessionStatus
 import io.github.jan.supabase.gotrue.auth
 import kotlinx.coroutines.launch
 
@@ -29,6 +32,7 @@ class AppLockActivity : AppCompatActivity() {
     private lateinit var message: TextView
     private var authenticating = false
     private var accountId: String? = null
+    private var openingLogin = false
     private val keyguard by lazy { getSystemService(KeyguardManager::class.java) }
     private val credentialLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         authenticating = false
@@ -60,7 +64,11 @@ class AppLockActivity : AppCompatActivity() {
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
                     authenticating = false
-                    if (errorCode == BiometricPrompt.ERROR_NEGATIVE_BUTTON && Build.VERSION.SDK_INT < 30) {
+                    if (Build.VERSION.SDK_INT < 30 && errorCode in setOf(
+                            BiometricPrompt.ERROR_NEGATIVE_BUTTON,
+                            BiometricPrompt.ERROR_LOCKOUT,
+                            BiometricPrompt.ERROR_LOCKOUT_PERMANENT
+                        )) {
                         requestDeviceCredential()
                     } else showRetry()
                 }
@@ -78,15 +86,12 @@ class AppLockActivity : AppCompatActivity() {
             prompt.cancelAuthentication()
             lifecycleScope.launch {
                 // Local logout must work offline; no cached account may auto-open the app.
-                SupabaseModule.client.auth.clearSession()
-                AppSessionLock.clear()
-                BusinessSession.clear()
+                SessionAccess.signOut(applicationContext)
                 openLogin()
             }
         }
         lifecycleScope.launch {
-            SupabaseModule.client.auth.awaitInitialization()
-            val id = SupabaseModule.client.auth.currentUserOrNull()?.id
+            val id = SessionAccess.localUser()?.id
             if (id == null || (accountId != null && accountId != id)) {
                 openLogin()
                 return@launch
@@ -94,6 +99,17 @@ class AppLockActivity : AppCompatActivity() {
             accountId = id
             AppSessionLock.state.bindSession(id)
             if (savedInstanceState == null) requestAuthentication()
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                SupabaseModule.client.auth.sessionStatus.collect { status ->
+                    if (status is SessionStatus.NotAuthenticated ||
+                        (status is SessionStatus.Authenticated && accountId != null &&
+                            status.session.user?.id != accountId)) {
+                        openLogin()
+                    }
+                }
+            }
         }
     }
 
@@ -149,18 +165,22 @@ class AppLockActivity : AppCompatActivity() {
 
     private fun unlock() {
         val id = accountId ?: return
-        if (SupabaseModule.client.auth.currentUserOrNull()?.id != id ||
-            !AppSessionLock.state.authenticate(id)) {
-            openLogin()
-            return
+        lifecycleScope.launch {
+            if (openingLogin || SessionAccess.localUser()?.id != id ||
+                !AppSessionLock.state.authenticate(id)) {
+                openLogin()
+                return@launch
+            }
+            setResult(RESULT_OK)
+            finish()
         }
-        setResult(RESULT_OK)
-        finish()
     }
 
     private fun showRetry() { message.setText(R.string.lock_retry) }
 
     private fun openLogin() {
+        if (openingLogin) return
+        openingLogin = true
         AppSessionLock.clear()
         startActivity(Intent(this, LoginActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK

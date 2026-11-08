@@ -197,20 +197,7 @@ class HomeActivity : ProtectedActivity() {
     private fun checkAuthAndLoadData() {
         lifecycleScope.launch {
             try {
-                runCatching { SupabaseModule.client.auth.awaitInitialization() }
-                val currentUser = SupabaseModule.client.auth.currentUserOrNull()
-
-                if (currentUser == null && !applicationContext.hasInternetConnection()) {
-                    val cachedNegocioId = BusinessSession.selectedId
-                    if (cachedNegocioId != null) {
-                        contextoListo = true
-                        bottomNav.isEnabled = true
-                        if (!supportFragmentManager.isStateSaved && supportFragmentManager.findFragmentById(R.id.fragmentContainer) == null) {
-                            replaceFragment(HomeFragment())
-                        }
-                        return@launch
-                    }
-                }
+                val currentUser = SessionAccess.localUser()
 
                 if (currentUser == null) {
                     startActivity(Intent(this@HomeActivity, LoginActivity::class.java))

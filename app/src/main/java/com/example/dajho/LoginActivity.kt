@@ -59,8 +59,7 @@ class LoginActivity : AppCompatActivity() {
         }
         handleAuthLink(intent)
         if (intent.data == null) lifecycleScope.launch {
-            SupabaseModule.client.auth.awaitInitialization()
-            if (SupabaseModule.client.auth.currentUserOrNull() != null) {
+            if (SessionAccess.localUser() != null) {
                 startActivity(Intent(this@LoginActivity, HomeActivity::class.java)); finish()
             }
         }

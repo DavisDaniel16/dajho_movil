@@ -14,6 +14,9 @@ object SupabaseModule {
         ) {
             install(Auth) {
                 sessionManager = SettingsSessionManager()
+                autoLoadFromStorage = true
+                autoSaveToStorage = true
+                alwaysAutoRefresh = true
                 scheme = "dajho"
                 host = "confirm"
             }

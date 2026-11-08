@@ -197,8 +197,7 @@ open class PerfilActivity : ProtectedActivity() {
     private fun cerrarSesion() {
         lifecycleScope.launch {
             try {
-                SupabaseModule.client.auth.signOut()
-                BusinessSession.clear()
+                SessionAccess.signOut(applicationContext)
                 val intent = Intent(this@PerfilActivity, LoginActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 }

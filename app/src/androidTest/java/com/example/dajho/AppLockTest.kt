@@ -68,6 +68,30 @@ class AppLockTest {
         }
     }
 
+    @Test fun lockedGrantConsumesInputAndHidesAnAlreadyOpenScreen() {
+        instrumentation.runOnMainSync { AppSessionLock.onLogin("lock-test-user") }
+        ActivityScenario.launch(LockTestHostActivity::class.java).use { scenario ->
+            instrumentation.waitForIdleSync()
+            scenario.onActivity {
+                assertEquals(View.VISIBLE, it.window.decorView.visibility)
+                // Revoking a grant exercises the same input barrier as an elapsed timeout.
+                AppSessionLock.clear()
+                val event = android.view.MotionEvent.obtain(0, 0, android.view.MotionEvent.ACTION_DOWN, 1f, 1f, 0)
+                try {
+                    assertTrue(it.window.callback!!.dispatchTouchEvent(event))
+                } finally {
+                    event.recycle()
+                }
+                assertEquals(View.INVISIBLE, it.window.decorView.visibility)
+            }
+            instrumentation.waitForIdleSync()
+            scenario.onActivity {
+                assertEquals(1, it.unlockRequests)
+                assertTrue(AppSessionLock.state.isLocked)
+            }
+        }
+    }
+
     @Test fun lockScreenInflatesInBothThemes() {
         instrumentation.runOnMainSync {
             for (mode in listOf(Configuration.UI_MODE_NIGHT_YES, Configuration.UI_MODE_NIGHT_NO)) {
