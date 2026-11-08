@@ -21,6 +21,17 @@ import io.github.jan.supabase.postgrest.rpc
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.Serializable
 import java.util.Locale
 
@@ -50,6 +61,7 @@ class BalanceFragment : Fragment() {
 
     private lateinit var balanceAdapter: BalanceAdapter
     private var userNegocioId: Long? = null
+    private var balanceJob: Job? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -106,38 +118,52 @@ class BalanceFragment : Fragment() {
             }
         }
 
+        parentFragmentManager.setFragmentResultListener(HomeActivity.RESULTADO_CONEXION, viewLifecycleOwner) { _, _ -> cargarDatosBalance() }
         cargarDatosBalance()
     }
 
     private suspend fun getNegocioId(): Long? = BusinessSession.current()?.negocio_id
 
+    private fun mostrarBalance(balance: BalanceNegocioDto, negocioId: Long) {
+        balanceAdapter.updateList(balance.movimientos)
+        tvTotalIngresos.text = "$${String.format(Locale.US, "%.2f", balance.ingresos)}"
+        tvTotalEgresos.text = "$${String.format(Locale.US, "%.2f", balance.egresos)}"
+        tvBalanceNeto.text = "$${String.format(Locale.US, "%.2f", balance.ingresos - balance.egresos)}"
+    }
+
     private fun cargarDatosBalance() {
-        progressBar.visibility = View.VISIBLE
-        viewLifecycleOwner.lifecycleScope.launch {
+        balanceJob?.cancel()
+        balanceJob = viewLifecycleOwner.lifecycleScope.launch {
             try {
-                val negocioId = userNegocioId ?: getNegocioId()
-                if (negocioId == null) {
-                    Toast.makeText(requireContext(), "No se encontró el negocio del usuario", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
+                val negocioId = userNegocioId ?: getNegocioId() ?: return@launch
                 userNegocioId = negocioId
+                val db = DajhoDatabase.getInstance(requireContext())
+                progressBar.visibility = View.VISIBLE
 
-                val balance = SupabaseModule.client.postgrest.rpc("balance_negocio", buildJsonObject {
-                    put("p_negocio", negocioId)
-                }).decodeAs<BalanceNegocioDto>()
-                balanceAdapter.updateList(balance.movimientos)
-                val totalIngresos = balance.ingresos
-                val totalEgresos = balance.egresos
-                val balanceNeto = totalIngresos - totalEgresos
+                if (requireContext().hasInternetConnection()) {
+                    try {
+                        val balance = SupabaseModule.client.postgrest.rpc("balance_negocio", buildJsonObject {
+                            put("p_negocio", negocioId)
+                        }).decodeAs<BalanceNegocioDto>()
+                        db.saveGestionItems(negocioId, "balance", ScreenArgs.json.encodeToString(balance))
+                        mostrarBalance(balance, negocioId)
+                        return@launch
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        Log.e("BalanceFragment", "Error cargando balance remoto: " + e.userMessage())
+                    }
+                }
 
-                tvTotalIngresos.text = "$${String.format(Locale.US, "%.2f", totalIngresos)}"
-                tvTotalEgresos.text = "$${String.format(Locale.US, "%.2f", totalEgresos)}"
-                tvBalanceNeto.text = "$${String.format(Locale.US, "%.2f", balanceNeto)}"
-
+                val cachedStr = db.getGestionItems(negocioId, "balance")
+                if (cachedStr != null) {
+                    val balance = ScreenArgs.json.decodeFromString<BalanceNegocioDto>(cachedStr)
+                    mostrarBalance(balance, negocioId)
+                } else {
+                    Toast.makeText(requireContext(), "Sin datos de balance guardados localmente", Toast.LENGTH_SHORT).show()
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                Log.e("BalanceFragment", "Error al cargar balance" + ": " + e.userMessage())
-                Toast.makeText(requireContext(), "Error al cargar balance: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
+                Log.e("BalanceFragment", "Error al cargar balance: " + e.userMessage())
             } finally {
                 progressBar.visibility = View.GONE
             }

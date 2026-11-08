@@ -17,6 +17,9 @@ data class ProductoNombreSimpleDto(
 @Serializable
 data class VarianteSimpleDto(
     val id: Long? = null,
+    val sku: String? = null,
+    val talla: String? = null,
+    val color: String? = null,
     val producto: ProductoNombreSimpleDto? = null
 )
 

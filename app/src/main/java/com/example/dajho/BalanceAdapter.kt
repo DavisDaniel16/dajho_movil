@@ -41,7 +41,7 @@ class BalanceAdapter(
         }
 
         holder.itemView.setOnClickListener(
-            if (item.tipo == "ingreso") View.OnClickListener {
+            if (item.tipo == "ingreso" && item.venta_id != null) View.OnClickListener {
                 onItemClick(item)
             } else null
         )

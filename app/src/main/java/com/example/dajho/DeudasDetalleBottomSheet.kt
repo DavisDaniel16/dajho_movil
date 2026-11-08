@@ -71,6 +71,7 @@ class DeudasDetalleBottomSheet() : BottomSheetDialogFragment() {
                     val fields = mutableListOf(FormField("Monto del abono ($)", String.format(Locale.US, "%.2f", totalSaldo), numeric = true))
                     if (method != 0) fields.add(FormField("Referencia de pago"))
 
+                    val requestId = java.util.UUID.randomUUID().toString()
                     showForm("Registrar Abono a $clienteNombre", fields, {
                         parentFragmentManager.setFragmentResult("deudas_actualizadas", Bundle.EMPTY)
                         dismiss()
@@ -83,28 +84,22 @@ class DeudasDetalleBottomSheet() : BottomSheetDialogFragment() {
                         val ref = if (method != 0) values.getOrNull(1).orEmpty().trim() else ""
                         if (method != 0) require(ref.isNotBlank()) { "Referencia requerida" }
 
-                        var restante = amount
-                        val deudasOrdenadas = listaDeudas.sortedBy { it.id }
+                        val clientId = requireNotNull(listaDeudas.firstOrNull()?.cliente_id) { "No se pudo identificar al cliente" }
+                        require(listaDeudas.all { it.cliente_id == clientId }) { "Las deudas corresponden a distintos clientes" }
+                        val negocioId = BusinessSession.requireId(requireContext())
 
-                        for (debt in deudasOrdenadas) {
-                            if (restante.signum() <= 0) break
-                            val debtSaldo = Money.decimal(requireNotNull(debt.saldo))
-                            val paymentForThisDebt = if (restante < debtSaldo) restante else debtSaldo
-
-                            BusinessOperations.execute(
-                                requireContext(),
-                                BusinessSession.requireId(),
-                                "abono",
-                                buildJsonObject {
-                                    put("fiado", debt.id)
-                                    put("monto", Money.json(paymentForThisDebt))
-                                    put("metodo", metodoStr)
-                                    put("referencia", if (ref.isNotBlank()) ref else null)
-                                }
-                            )
-
-                            restante -= paymentForThisDebt
+                        val params = buildJsonObject {
+                            put("p_negocio", negocioId)
+                            put("p_cliente", clientId)
+                            put("p_solicitud", requestId)
+                            put("p_monto", Money.json(amount))
+                            put("p_metodo", metodoStr)
+                            put("p_referencia", ref.takeIf { it.isNotBlank() })
                         }
+
+                        // Local update & offline queueing
+                        DajhoDatabase.getInstance(requireContext()).abonarDeudaClienteLocally(negocioId, clientId, amount.toDouble())
+                        SyncManager.enqueueAndTrySync(requireContext(), negocioId, "abonar_cliente", params, requestId)
                     }
                 }.show()
         }

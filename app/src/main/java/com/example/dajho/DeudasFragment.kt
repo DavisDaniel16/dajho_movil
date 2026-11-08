@@ -14,6 +14,9 @@ import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 class DeudasFragment : Fragment() {
 
@@ -46,6 +49,7 @@ class DeudasFragment : Fragment() {
         rvDeudas.adapter = deudaAdapter
 
         childFragmentManager.setFragmentResultListener("deudas_actualizadas", viewLifecycleOwner) { _, _ -> cargarDeudas() }
+        parentFragmentManager.setFragmentResultListener(HomeActivity.RESULTADO_CONEXION, viewLifecycleOwner) { _, _ -> cargarDeudas() }
         cargarDeudas()
     }
 
@@ -60,9 +64,16 @@ class DeudasFragment : Fragment() {
                     return@launch
                 }
 
-                // Consulta con JOIN anidado: fiado -> cliente, venta -> detalle_venta -> variante -> producto
-                val deudasRaw = CustomerRepository.debts(negocioId)
+                val deudasRaw = CustomerRepository.debts(negocioId, context = requireContext())
+                mostrarDeudas(deudasRaw)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                Log.e("DeudasFragment", "Error al cargar deudas: " + e.userMessage())
+            }
+        }
+    }
 
+    private fun mostrarDeudas(deudasRaw: List<DeudaDto>) {
                 // Agrupar por cliente_id
                 val deudasAgrupadas = deudasRaw.groupBy { it.cliente_id }.map { (clienteId, fiadosCliente) ->
                     val primerCliente = fiadosCliente.firstOrNull()?.cliente
@@ -79,15 +90,8 @@ class DeudasFragment : Fragment() {
 
                 deudaAdapter.updateList(deudasAgrupadas)
 
-                if (deudasAgrupadas.isEmpty()) {
-                    Toast.makeText(requireContext(), "No tienes deudas pendientes de cobro", Toast.LENGTH_SHORT).show()
-                }
+                view?.findViewById<View>(R.id.tvEstadoVacio)?.visibility =
+                    if (deudasAgrupadas.isEmpty()) View.VISIBLE else View.GONE
 
-            } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) throw e
-                Log.e("DeudasFragment", "Error al cargar deudas" + ": " + e.userMessage())
-                Toast.makeText(requireContext(), "Error al cargar deudas: ${e.userMessage()}", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 }
