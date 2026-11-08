@@ -139,6 +139,13 @@ open class PerfilActivity : ProtectedActivity() {
             requestLockPreferenceChange(requested)
         }
 
+        findViewById<View>(R.id.menuCambiarContrasena).setOnClickListener {
+            if (!supportFragmentManager.isStateSaved &&
+                supportFragmentManager.findFragmentByTag(ChangePasswordDialog.TAG) == null) {
+                ChangePasswordDialog().show(supportFragmentManager, ChangePasswordDialog.TAG)
+            }
+        }
+
         btnCerrarSesion.setOnClickListener {
             cerrarSesion()
         }

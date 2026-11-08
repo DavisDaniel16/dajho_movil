@@ -14,4 +14,25 @@
     <string name="lock_setting_description">Pide huella o el PIN, patrón o contraseña del teléfono tras 5 minutos sin actividad y al volver a abrir DAJHO. Opcional en este dispositivo.</string>
     <string name="lock_setting_confirm">Confirma tu identidad para cambiar el bloqueo por inactividad.</string>
     <string name="lock_setting_cancel">Cancelar</string>
+    <string name="password_change_title">Cambiar contraseña</string>
+    <string name="password_change_help">Usa al menos 8 caracteres para la nueva contraseña. Necesitas conexión a internet. Después del cambio volverás a iniciar sesión.</string>
+    <string name="password_current">Contraseña actual</string>
+    <string name="password_new">Nueva contraseña</string>
+    <string name="password_confirm">Confirmar nueva contraseña</string>
+    <string name="password_save">Guardar contraseña</string>
+    <string name="password_saving">Guardando…</string>
+    <string name="password_changed">Contraseña actualizada. Inicia sesión con tu nueva contraseña.</string>
+    <string name="password_current_required">Ingresa tu contraseña actual.</string>
+    <string name="password_too_short">La nueva contraseña debe tener al menos 8 caracteres.</string>
+    <string name="password_too_long">La nueva contraseña es demasiado larga. Usa una más corta.</string>
+    <string name="password_mismatch">Las contraseñas nuevas no coinciden.</string>
+    <string name="password_same">Elige una contraseña diferente de la actual.</string>
+    <string name="password_invalid_current">La contraseña actual es incorrecta.</string>
+    <string name="password_network">No se pudo confirmar el cambio. Comprueba tu conexión. Si no puedes iniciar sesión, usa la recuperación de contraseña.</string>
+    <string name="password_rate_limit">Demasiados intentos. Espera unos minutos antes de volver a intentarlo.</string>
+    <string name="password_weak">La nueva contraseña no cumple los requisitos de seguridad. Usa una más fuerte.</string>
+    <string name="password_reauth">Tu cuenta requiere una verificación adicional. Vuelve a iniciar sesión o usa la recuperación de contraseña desde el login.</string>
+    <string name="password_account_changed">La cuenta cambió durante la operación. Abre de nuevo este formulario.</string>
+    <string name="password_session_required">Necesitas una sesión válida con correo y contraseña. Vuelve a iniciar sesión.</string>
+    <string name="password_unexpected">No se pudo cambiar la contraseña. Inténtalo más tarde.</string>
 </resources>
