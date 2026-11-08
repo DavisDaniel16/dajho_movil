@@ -21,4 +21,8 @@
     <color name="feedback_info_fg">#BFDBFE</color>
     <color name="feedback_pending_bg">#451A03</color>
     <color name="feedback_pending_fg">#FDE68A</color>
+    <color name="sale_accent">#7DD3FC</color>
+    <color name="sale_action">#0369A1</color>
+    <color name="sale_product_bg">#15344A</color>
+    <color name="sale_outline">#475569</color>
 </resources>

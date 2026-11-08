@@ -1,122 +1,226 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8F9FA"
-    tools:context=".VentaFragment">
+    android:orientation="vertical"
+    android:background="@color/bg_app"
+    android:theme="@style/ThemeOverlay.Dajho.Sale">
 
-    <!-- Buscador de productos -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="8dp">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/sale_title"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVaciarCarrito"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/sale_clear"
+            android:textAllCaps="false"
+            android:textColor="@color/feedback_error_fg" />
+    </LinearLayout>
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/saleTabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="8dp"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:checkedButton="@id/btnProductos">
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnProductos"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            app:backgroundTint="@color/sale_tab_background"
+            app:strokeColor="@color/divider_color"
+            android:textColor="@color/sale_tab_foreground"
+            android:text="@string/sale_products"
+            android:textAllCaps="false"
+            app:cornerRadius="12dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnVerCarrito"
+            app:backgroundTint="@color/sale_tab_background"
+            app:strokeColor="@color/divider_color"
+            android:textColor="@color/sale_tab_foreground"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:textAllCaps="false"
+            app:cornerRadius="12dp" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilSearch"
         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:hint="Buscar producto por nombre o código..."
+        android:layout_marginHorizontal="16dp"
+        android:hint="@string/sale_search"
+        app:boxBackgroundColor="@color/card_bg"
+        app:boxCornerRadiusTopStart="12dp"
+        app:boxCornerRadiusTopEnd="12dp"
+        app:boxCornerRadiusBottomStart="12dp"
+        app:boxCornerRadiusBottomEnd="12dp"
+        app:endIconMode="clear_text"
         app:startIconDrawable="@drawable/ic_search"
-        app:startIconTint="#64748B"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
+        app:startIconTint="@color/text_secondary">
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etSearch"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:imeOptions="actionSearch"
             android:inputType="text"
-            android:maxLines="1" />
-
+            android:singleLine="true"
+            android:textColor="@color/text_primary" />
     </com.google.android.material.textfield.TextInputLayout>
 
-    <!-- Botón para alternar Vista Carrito / Productos -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnVerCarrito"
-        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
-        android:text="Ver Carrito (0)"
-        android:textColor="#1E293B"
-        app:icon="@drawable/ic_shopping_bag"
-        app:iconTint="#1E293B"
-        app:cornerRadius="20dp"
-        app:strokeColor="#CBD5E1"
-        app:layout_constraintTop_toBottomOf="@id/tilSearch"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <!-- Lista de productos / Carrito -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvCarrito"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_marginTop="8dp"
+    <TextView
+        android:id="@+id/tvSaleHint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
-        android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/btnVerCarrito"
-        app:layout_constraintBottom_toTopOf="@id/bottomCheckoutBar"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        android:paddingVertical="12dp"
+        android:text="@string/sale_catalog_hint"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
 
-    <!-- Barra inferior de cobro -->
-    <com.google.android.material.card.MaterialCardView
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvCarrito"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="12dp"
+            android:clipToPadding="false" />
+        <ScrollView
+            android:id="@+id/saleEmptyState"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="24dp">
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_shopping_bag"
+                    app:tint="@color/sky" />
+                <ProgressBar
+                    android:id="@+id/saleLoading"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
+                <TextView
+                    android:id="@+id/tvSaleEmptyTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tvSaleEmptyBody"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnEmptyAction"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:minHeight="48dp"
+                    android:textAllCaps="false"
+                    app:cornerRadius="12dp" />
+            </LinearLayout>
+        </ScrollView>
+    </FrameLayout>
+
+    <LinearLayout
         android:id="@+id/bottomCheckoutBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:cardBackgroundColor="@android:color/white"
-        app:cardElevation="8dp"
-        app:strokeWidth="0dp"
-        app:cardCornerRadius="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
+        android:background="@color/card_bg"
+        android:elevation="2dp"
+        android:orientation="vertical"
+        android:padding="16dp">
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="16dp">
-
+            android:gravity="center_vertical">
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical">
-
                 <TextView
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Total:"
-                    android:textColor="#64748B"
-                    android:textSize="13sp" />
-
+                    android:text="@string/sale_total"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp" />
                 <TextView
-                    android:id="@+id/tvTotal"
-                    android:layout_width="wrap_content"
+                    android:id="@+id/tvSaleUnits"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="$0.00"
-                    android:textColor="@android:color/black"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp" />
             </LinearLayout>
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btnCobrar"
-                android:layout_width="wrap_content"
-                android:layout_height="50dp"
-                android:backgroundTint="#1E293B"
-                android:text="COBRAR"
-                android:textColor="@android:color/white"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                app:cornerRadius="12dp" />
-
+            <TextView
+                android:id="@+id/tvTotal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/text_primary"
+                android:textSize="26sp"
+                android:textStyle="bold" />
         </LinearLayout>
-
-    </com.google.android.material.card.MaterialCardView>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCobrar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:minHeight="56dp"
+            app:backgroundTint="@color/sale_action_background"
+            android:textColor="@color/sale_action_foreground"
+            android:text="@string/sale_charge"
+            android:textAllCaps="false"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:cornerRadius="12dp" />
+    </LinearLayout>
+</LinearLayout>

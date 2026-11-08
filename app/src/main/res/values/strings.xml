@@ -1,4 +1,45 @@
 <resources>
+    <string name="sale_title">Nueva venta</string>
+    <string name="sale_plus" translatable="false">+</string>
+    <string name="sale_minus" translatable="false">−</string>
+    <string name="sale_products">Productos</string>
+    <string name="sale_cart_count">Carrito (%1$d)</string>
+    <string name="sale_clear">Vaciar</string>
+    <string name="sale_clear_title">¿Vaciar el carrito?</string>
+    <string name="sale_clear_message">Se quitarán los productos de esta venta. Esta acción no registra una venta.</string>
+    <string name="sale_cancel">Cancelar</string>
+    <string name="sale_search">Buscar por nombre o código</string>
+    <string name="sale_catalog_hint">Toca + para agregar a la venta</string>
+    <string name="sale_cart_hint">Revisa las cantidades antes de cobrar</string>
+    <string name="sale_total">Total de la venta</string>
+    <string name="sale_charge">Continuar al cobro</string>
+    <string name="sale_empty_title">Tu carrito está vacío</string>
+    <string name="sale_empty_body">Agrega productos del catálogo para comenzar una venta.</string>
+    <string name="sale_add_products">Agregar productos</string>
+    <string name="sale_no_results">No encontramos productos</string>
+    <string name="sale_no_results_help">Prueba con otro nombre o código.</string>
+    <string name="sale_no_products">Aún no hay productos</string>
+    <string name="sale_no_products_help">Agrega productos desde Inventario o vuelve a cargar el catálogo.</string>
+    <string name="sale_loading">Cargando productos…</string>
+    <string name="sale_load_error">No pudimos cargar el catálogo</string>
+    <string name="sale_retry">Volver a cargar</string>
+    <string name="sale_product_fallback">Producto sin nombre</string>
+    <string name="sale_size">Talla %1$s</string>
+    <string name="sale_sku">SKU: %1$s</string>
+    <string name="sale_unit_price">%1$s por unidad</string>
+    <string name="sale_quantity">Cantidad</string>
+    <string name="sale_line_total">Subtotal · %1$s</string>
+    <string name="sale_stock">Disponibles: %1$d</string>
+    <string name="sale_out_of_stock">Sin stock</string>
+    <string name="sale_in_cart">En carrito: %1$d</string>
+    <string name="sale_add_item">Agregar %1$s al carrito</string>
+    <string name="sale_remove_item">Quitar %1$s del carrito</string>
+    <string name="sale_increase_item">Aumentar cantidad de %1$s</string>
+    <string name="sale_decrease_item">Reducir cantidad de %1$s</string>
+    <plurals name="sale_units">
+        <item quantity="one">%d unidad</item>
+        <item quantity="other">%d unidades</item>
+    </plurals>
     <string name="app_name">DAJHO</string>
     <string name="lock_title">DAJHO está bloqueado</string>
     <string name="lock_message">Confirma tu identidad para continuar con tu sesión.</string>

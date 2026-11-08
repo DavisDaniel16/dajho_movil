@@ -3,114 +3,130 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="8dp"
-    app:cardBackgroundColor="@android:color/white"
+    android:layout_marginBottom="12dp"
+    app:cardBackgroundColor="@color/card_bg"
     app:cardCornerRadius="12dp"
-    app:cardElevation="1dp"
-    app:strokeWidth="0dp">
-
-    <androidx.constraintlayout.widget.ConstraintLayout
+    app:cardElevation="0dp"
+    app:strokeColor="@color/sale_outline"
+    app:strokeWidth="1dp">
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:orientation="vertical"
         android:padding="12dp">
-
-        <!-- Nombre del Producto -->
-        <TextView
-            android:id="@+id/tvProductoNombre"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:text="Nombre del Producto"
-            android:textColor="@android:color/black"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/ivEliminar"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <!-- Botón Eliminar -->
-        <ImageView
-            android:id="@+id/ivEliminar"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@drawable/ic_trash"
-            android:contentDescription="Eliminar"
-            app:tint="#EF4444"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <!-- Talla y Color -->
-        <TextView
-            android:id="@+id/tvVarianteInfo"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="Talla: M | Color: Azul"
-            android:textColor="#64748B"
-            android:textSize="12sp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toStartOf="@id/tvSubtotal"
-            app:layout_constraintTop_toBottomOf="@id/tvProductoNombre" />
-
-        <!-- Controles de Cantidad (- 1 +) -->
         <LinearLayout
-            android:id="@+id/layoutCantidad"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="top">
+            <TextView
+                android:id="@+id/tvProductInitial"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/bg_sale_product"
+                android:gravity="center"
+                android:importantForAccessibility="no"
+                android:textColor="@color/sale_accent"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical">
+                <TextView
+                    android:id="@+id/tvProductoNombre"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/tvVarianteInfo"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+            </LinearLayout>
+            <androidx.appcompat.widget.AppCompatImageButton
+                android:id="@+id/ivEliminar"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="14dp"
+                android:src="@drawable/ic_trash"
+                app:tint="@color/text_secondary" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp">
+            <TextView
+                android:id="@+id/tvUnitPrice"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+            <TextView
+                android:id="@+id/tvSubtotal"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/tvVarianteInfo">
-
+            android:gravity="center_vertical">
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/sale_quantity"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnMenos"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
                 android:padding="0dp"
-                android:text="-"
-                android:textColor="#1E293B"
-                android:textSize="16sp"
+                android:text="@string/sale_minus"
+                android:textColor="@color/sale_accent"
+                android:textSize="20sp"
                 app:cornerRadius="8dp"
-                app:strokeColor="#CBD5E1" />
-
+                app:strokeColor="@color/sale_outline" />
             <TextView
                 android:id="@+id/tvCantidad"
-                android:layout_width="32dp"
+                android:layout_width="48dp"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="1"
-                android:textColor="@android:color/black"
-                android:textSize="15sp"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
                 android:textStyle="bold" />
-
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnMas"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
                 android:padding="0dp"
-                android:text="+"
-                android:textColor="#1E293B"
-                android:textSize="16sp"
+                android:text="@string/sale_plus"
+                android:textColor="@color/sale_accent"
+                android:textSize="20sp"
                 app:cornerRadius="8dp"
-                app:strokeColor="#CBD5E1" />
-
+                app:strokeColor="@color/sale_outline" />
         </LinearLayout>
-
-        <!-- Subtotal -->
-        <TextView
-            android:id="@+id/tvSubtotal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="$0.00"
-            android:textColor="#10B981"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            app:layout_constraintBottom_toBottomOf="@id/layoutCantidad"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="@id/layoutCantidad" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
-
+    </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
